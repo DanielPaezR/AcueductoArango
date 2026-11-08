@@ -1,5 +1,6 @@
 import { Globe, Landmark, Plus } from "lucide-react";
 import Link from "next/link";
+import { CompartirPublica } from "@/components/compartir-publica";
 import { FilaMovimiento } from "@/components/lista-movimientos";
 import { pesos } from "@/lib/dinero";
 import { cuentasConSaldo, listarMovimientos } from "@/lib/finanzas";
@@ -96,6 +97,8 @@ export default async function Tesoreria() {
           </ul>
         </section>
       )}
+
+      <CompartirPublica />
 
       <section aria-labelledby="historial">
         <h2 id="historial" className="mb-3 text-lg font-bold">Últimos movimientos</h2>

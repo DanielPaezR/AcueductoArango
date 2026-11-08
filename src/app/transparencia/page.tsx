@@ -4,6 +4,8 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { FilaMovimiento } from "@/components/lista-movimientos";
 import { ConsultaEstado } from "./consulta";
+import { BotonesCompartir } from "@/components/compartir-botones";
+import { urlPublica } from "@/lib/url-publica";
 import { db, schema } from "@/db";
 import { nombreMes, pesos } from "@/lib/dinero";
 import { cuentasConSaldo, listarMovimientos, resumenCartera } from "@/lib/finanzas";
@@ -32,6 +34,7 @@ export default async function Transparencia({ searchParams }: PageProps<"/transp
       .from(schema.movimientos),
   ]);
   const saldoTotal = cuentas.reduce((a, c) => a + c.saldo, 0);
+  const url = await urlPublica();
   const paginas = Math.max(1, Math.ceil(total / POR_PAGINA));
   const ahora = new Date().toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "long", timeStyle: "short" });
   const mes = `${nombreMes(cartera.mes)} ${cartera.anio}`;
@@ -151,6 +154,14 @@ export default async function Transparencia({ searchParams }: PageProps<"/transp
               {pagina < paginas && <Link className="btn-secundario" href={`/transparencia?pagina=${pagina + 1}`}>Anteriores</Link>}
             </nav>
           )}
+        </section>
+
+        <section className="tarjeta" aria-labelledby="compartir">
+          <h2 id="compartir" className="mb-3 text-lg font-bold">Compartir con los vecinos</h2>
+          <BotonesCompartir
+            url={url}
+            mensaje={`Cuentas claras del acueducto de la vereda Arango: saldo, gastos con facturas y consulta del estado de cuenta con la cédula. ${url}`}
+          />
         </section>
 
         <footer className="border-t border-stone-200 pt-5 text-stone-600">

@@ -1,5 +1,6 @@
 import { desc, eq, sql } from "drizzle-orm";
 import Link from "next/link";
+import { CompartirPublica } from "@/components/compartir-publica";
 import { db, schema } from "@/db";
 import { fechaCorta, hoyBogota, nombreMes, pesos } from "@/lib/dinero";
 import { resumenCartera, tarifaVigente } from "@/lib/finanzas";
@@ -114,6 +115,8 @@ export default async function Facturacion() {
           <div className="tarjeta text-stone-600">Todavía no se ha generado ningún mes.</div>
         )}
       </section>
+
+      <CompartirPublica />
 
       <section className="tarjeta" aria-labelledby="tarifas">
         <h2 id="tarifas" className="mb-1 text-lg font-bold">Tarifa mensual</h2>

@@ -261,7 +261,7 @@ export default function MapaRed({
         </p>
       )}
 
-      <div className="relative min-h-0 flex-1">
+      <div className="relative isolate min-h-0 flex-1">
         <MapContainer center={CENTRO_MUNICIPIO} zoom={14} className="absolute inset-0">
           <CapasBase />
           <Encuadrar elementos={elementos} tramos={tramos} casas={casas} />

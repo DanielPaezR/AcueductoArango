@@ -157,10 +157,13 @@ h3 {
   @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[0.82rem] font-semibold;
 }
 
-/* Leaflet hereda la tipografía */
+/* Leaflet hereda la tipografía y queda encerrado en su propia capa:
+   sus índices internos (hasta 1000) no compiten con el menú ni con la barra de la app. */
 .leaflet-container {
   font-family: var(--font-sans);
   font-size: 0.9rem;
+  isolation: isolate;
+  z-index: 0;
 }
 .leaflet-popup-content-wrapper {
   border-radius: var(--radius-lg);

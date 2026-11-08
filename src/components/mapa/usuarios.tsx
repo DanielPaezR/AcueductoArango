@@ -146,7 +146,7 @@ export default function MapaUsuarios({
           </select>
         </div>
       </div>
-      <div className="relative flex-1">
+      <div className="relative isolate flex-1">
         <MapContainer center={CENTRO_MUNICIPIO} zoom={14} className="absolute inset-0" preferCanvas>
           <CapasBase />
           <Encuadrar puntos={puntos} />

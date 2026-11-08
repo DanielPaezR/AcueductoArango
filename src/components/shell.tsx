@@ -3,7 +3,7 @@
 import { LogOut, Menu, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { logout } from "@/actions/auth";
 import { ICONOS } from "./iconos";
 import type { ItemNav } from "./nav";
@@ -39,6 +39,19 @@ export function Shell({
 }) {
   const [abierto, setAbierto] = useState(false);
   const path = usePathname();
+
+  // Con el menú abierto: Esc lo cierra y la página de atrás no se desplaza
+  useEffect(() => {
+    if (!abierto) return;
+    const tecla = (e: KeyboardEvent) => e.key === "Escape" && setAbierto(false);
+    document.addEventListener("keydown", tecla);
+    const antes = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", tecla);
+      document.body.style.overflow = antes;
+    };
+  }, [abierto]);
   const activo = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
   const disponible = (i: ItemNav) => (i.fase ?? 0) <= faseActual;
 
@@ -128,12 +141,20 @@ export function Shell({
       </aside>
 
       {/* Menú completo en el celular */}
-      {abierto && <div className="fixed inset-0 z-40 bg-stone-900/50 lg:hidden" onClick={() => setAbierto(false)} />}
+      {/* Fondo oscuro: por encima de todo (incluidos los mapas); tocarlo cierra el menú */}
+      <div
+        className={`fixed inset-0 z-[2000] bg-stone-900/50 transition-opacity duration-200 lg:hidden ${
+          abierto ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+        onClick={() => setAbierto(false)}
+        aria-hidden
+      />
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[18rem] max-w-[85vw] flex-col bg-marca-800 shadow-2xl transition-transform duration-200 lg:hidden ${
+        className={`fixed inset-y-0 left-0 z-[2010] flex w-[18rem] max-w-[85vw] flex-col bg-marca-800 shadow-2xl transition-transform duration-200 lg:hidden ${
           abierto ? "translate-x-0" : "-translate-x-full"
         }`}
         aria-hidden={!abierto}
+        inert={!abierto}
       >
         <div className="flex items-center justify-between px-5 pt-5 pb-3">
           <Marca />

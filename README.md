@@ -222,5 +222,6 @@ Nota: `.npmrc` usa `legacy-peer-deps` por un fallo de npm con dependencias opcio
 | Fotos quedan "sin subir": *Cloudinary no está configurado* | Faltan las variables `CLOUDINARY_*`. |
 | Un celular no funciona sin señal | Abrirlo antes con señal y sesión iniciada; no borrar datos del navegador con pendientes. |
 | "Sesión vencida" al sincronizar | Ingresar de nuevo con señal; los datos siguen en el celular y se suben después. |
-| "Demasiados intentos fallidos" | Esperar 15 minutos o que la presidencia restablezca la clave. |
+| "Demasiados intentos fallidos" | Esperar 15 minutos o que la presidencia restablezca la clave (reiniciar el servicio también lo quita). |
+| El superadmin olvidó su clave | En Railway agregue `RESET_SUPERADMIN_PASSWORD` con una clave temporal (8+ caracteres) y espere el redespliegue; entre con `SEED_SUPERADMIN_USERNAME` y esa clave, cámbiela, y **borre la variable**. Los logs muestran los usuarios superadmin existentes. |
 | Las páginas legales dicen "[pendiente…]" | Configurar las variables `JAC_*`. |

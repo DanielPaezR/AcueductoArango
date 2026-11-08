@@ -2,6 +2,7 @@ import ExcelJS from "exceljs";
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import { usuarioApi } from "@/lib/api";
+import { fondosPermitidos } from "@/lib/permisos";
 import { auditar } from "@/lib/auditoria";
 import { estadoSuscriptores } from "@/lib/finanzas";
 import { TIPOS_PROYECTO } from "@/lib/ayudas";
@@ -28,7 +29,7 @@ const traducir = (rows: Record<string, unknown>[], mapa: Record<string, keyof ty
   });
 
 type Columna = { titulo: string; clave: string; ancho?: number; formato?: "pesos" | "numero" | "fecha" };
-type Reporte = { nombre: string; columnas: Columna[]; filas: () => Promise<Record<string, unknown>[]> };
+type Reporte = { nombre: string; columnas: Columna[]; filas: (fondos: string[]) => Promise<Record<string, unknown>[]> };
 
 const filas = async (q: ReturnType<typeof sql>) => (await db.execute(q)).rows as Record<string, unknown>[];
 
@@ -133,10 +134,11 @@ const REPORTES: Record<string, Reporte> = {
       { titulo: "Aprobó", clave: "cargo_aprobacion", ancho: 18 },
       { titulo: "Motivo (rechazo/anulación)", clave: "motivo", ancho: 28 },
     ],
-    filas: async () =>
+    filas: async (fondos) =>
       traducir(await filas(sql`select m.fecha::text, case c.fondo when 'junta' then 'Junta' else 'Acueducto' end as fondo, c.nombre as cuenta, m.tipo, m.categoria, m.concepto, m.valor::float as valor, m.estado,
         m.cargo_registro, m.cargo_aprobacion, m.motivo
-        from movimientos m join cuentas c on c.id = m.cuenta_id order by m.fecha desc, m.created_at desc`), { tipo: "tipoMov", estado: "estadoMov" }),
+        from movimientos m join cuentas c on c.id = m.cuenta_id
+        where c.fondo = any(${fondos}) order by m.fecha desc, m.created_at desc`), { tipo: "tipoMov", estado: "estadoMov" }),
   },
   mantenimientos: {
     nombre: "Mantenimientos y arreglos",
@@ -206,7 +208,9 @@ export async function GET(_req: Request, ctx: { params: Promise<{ tipo: string }
   }));
   hoja.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
   hoja.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF184A30" } };
-  const datos = await r.filas();
+  const fondos = fondosPermitidos(u, "ver");
+  if (tipo === "movimientos" && !fondos.length) return Response.json({ error: "No tiene acceso a la tesorería" }, { status: 403 });
+  const datos = await r.filas(fondos);
   for (const f of datos) hoja.addRow(Object.fromEntries(r.columnas.map((c) => [c.clave, f[c.clave] ?? null])));
   hoja.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: r.columnas.length } };
 

@@ -15,7 +15,15 @@ export type NombreIcono =
   | "usuarios"
   | "bitacora";
 
-export type ItemNav = { href: string; label: string; icono: NombreIcono; seccion?: Seccion; fase?: number };
+export type ItemNav = {
+  href: string;
+  label: string;
+  icono: NombreIcono;
+  seccion?: Seccion;
+  /** Basta con tener permiso en cualquiera de estas secciones. */
+  secciones?: Seccion[];
+  fase?: number;
+};
 
 /** `fase` marca módulos aún no construidos (se muestran deshabilitados). */
 export const NAV: ItemNav[] = [
@@ -27,7 +35,7 @@ export const NAV: ItemNav[] = [
   { href: "/mantenimientos", label: "Mantenimientos", icono: "mantenimientos", seccion: "mantenimientos", },
   { href: "/suscriptores", label: "Suscriptores", icono: "suscriptores", seccion: "suscriptores" },
   { href: "/facturacion", label: "Cobros del mes", icono: "facturacion", seccion: "facturacion" },
-  { href: "/tesoreria", label: "Tesorería", icono: "tesoreria", seccion: "tesoreria" },
+  { href: "/tesoreria", label: "Tesorería", icono: "tesoreria", secciones: ["tesoreria", "tesoreria_junta"] },
   { href: "/transparencia", label: "Página pública", icono: "transparencia" },
   { href: "/reportes", label: "Reportes", icono: "reportes", seccion: "reportes" },
   { href: "/usuarios", label: "Usuarios", icono: "usuarios", seccion: "usuarios" },

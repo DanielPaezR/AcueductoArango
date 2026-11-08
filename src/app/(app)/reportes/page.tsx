@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { FileSpreadsheet } from "lucide-react";
 import { db } from "@/db";
 import { edadPersona } from "@/lib/opciones";
-import { puede } from "@/lib/permisos";
+import { fondosPermitidos, puede } from "@/lib/permisos";
 import { requerirPermiso } from "@/lib/session";
 
 export const metadata = { title: "Reportes" };
@@ -20,7 +20,7 @@ const DESCARGAS = [
   { tipo: "viviendas", titulo: "Censo de viviendas", detalle: "Una fila por casa con las 12 preguntas, ubicación y acueducto", seccion: "censo" },
   { tipo: "personas", titulo: "Personas censadas", detalle: "Nombre, documento, edad y vivienda", seccion: "censo" },
   { tipo: "suscriptores", titulo: "Suscriptores y cartera", detalle: "Estado de pago, meses de atraso y deuda", seccion: "suscriptores" },
-  { tipo: "movimientos", titulo: "Movimientos de tesorería", detalle: "Ingresos y gastos con su estado y cargos", seccion: "tesoreria" },
+  { tipo: "movimientos", titulo: "Movimientos de tesorería", detalle: "Ingresos y gastos con su estado y cargos (de los fondos a los que tiene acceso)", seccion: "tesoreria" },
   { tipo: "mantenimientos", titulo: "Mantenimientos y arreglos", detalle: "Arreglos con costos de materiales y mano de obra", seccion: "mantenimientos" },
   { tipo: "ayudas", titulo: "Ayudas y proyectos", detalle: "Beneficiarios y participantes por proyecto", seccion: "ayudas" },
 ] as const;
@@ -111,7 +111,7 @@ export default async function Reportes() {
         <h2 id="descargas" className="mb-1 text-lg font-bold">Descargar en Excel</h2>
         <p className="mb-3 text-stone-700">Contienen datos personales: compártalos solo con la Junta.</p>
         <ul className="space-y-2.5">
-          {DESCARGAS.filter((d) => puede(u, d.seccion, "ver")).map((d) => (
+          {DESCARGAS.filter((d) => (d.tipo === "movimientos" ? fondosPermitidos(u, "ver").length > 0 : puede(u, d.seccion, "ver"))).map((d) => (
             <li key={d.tipo}>
               <a href={`/api/reportes/${d.tipo}`} className="flex items-center gap-3 rounded-xl border border-stone-200 bg-white p-4 hover:border-marca-600" download>
                 <FileSpreadsheet className="size-7 shrink-0 text-marca-700" aria-hidden />

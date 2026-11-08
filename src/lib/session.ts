@@ -5,7 +5,7 @@ import { cache } from "react";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
-import { puede, type Accion, type Seccion, type Permisos } from "./permisos";
+import { fondosPermitidos, puede, type Accion, type FondoPermiso, type Seccion, type Permisos } from "./permisos";
 
 export const SESSION_COOKIE = "vereda_session";
 const DURACION_DIAS = 30; // larga, porque en campo no siempre hay señal para volver a entrar
@@ -84,4 +84,18 @@ export async function requerirPermiso(seccion: Seccion, accion: Accion = "ver") 
   const u = await requerirUsuario();
   if (!puede(u, seccion, accion)) redirect("/sin-acceso");
   return u;
+}
+
+/** Exige el permiso en al menos un fondo de tesorería; devuelve el usuario y los fondos permitidos. */
+export async function requerirAlgunFondo(accion: Accion = "ver") {
+  const u = await requerirUsuario();
+  const fondos = fondosPermitidos(u, accion);
+  if (!fondos.length) redirect("/sin-acceso");
+  return { u, fondos };
+}
+
+/** Lanza error si el usuario no puede hacer la acción en ese fondo (para server actions). */
+export function exigirFondo(u: UsuarioSesion, fondo: FondoPermiso, accion: Accion) {
+  if (!fondosPermitidos(u, accion).includes(fondo))
+    throw new Error(`No tiene permiso para esta acción en la tesorería ${fondo === "junta" ? "de la Junta" : "del acueducto"}`);
 }

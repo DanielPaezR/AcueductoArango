@@ -7,7 +7,7 @@ import { db, schema } from "@/db";
 import { auditar } from "@/lib/auditoria";
 import { CATEGORIAS_POR_FONDO, leerPesos, type Fondo } from "@/lib/dinero";
 import { ROLES, type Rol } from "@/lib/permisos";
-import { requerirPermiso } from "@/lib/session";
+import { exigirFondo, requerirUsuario } from "@/lib/session";
 import type { Estado } from "./auth";
 
 const { movimientos: M, cuentas: C } = schema;
@@ -16,6 +16,18 @@ const { movimientos: M, cuentas: C } = schema;
 async function cargoDe(usuarioId: string) {
   const u = await db.query.usuarios.findFirst({ where: eq(schema.usuarios.id, usuarioId), columns: { cargo: true, rol: true } });
   return u?.cargo || ROLES[(u?.rol ?? "admin") as Rol];
+}
+
+async function fondoDeCuenta(id: number): Promise<"acueducto" | "junta"> {
+  const c = await db.query.cuentas.findFirst({ where: eq(C.id, id), columns: { fondo: true } });
+  if (!c) throw new Error("La cuenta no existe");
+  return c.fondo as "acueducto" | "junta";
+}
+
+async function fondoDeMovimiento(id: string) {
+  const m = await db.query.movimientos.findFirst({ where: eq(M.id, id), columns: { cuentaId: true } });
+  if (!m) throw new Error("El movimiento no existe");
+  return fondoDeCuenta(m.cuentaId);
 }
 
 function refrescar() {
@@ -37,9 +49,14 @@ const cuentaSchema = z.object({
 });
 
 export async function crearCuenta(_: Estado, form: FormData): Promise<Estado> {
-  const u = await requerirPermiso("tesoreria", "aprobar");
+  const u = await requerirUsuario();
   const p = cuentaSchema.safeParse(Object.fromEntries(form));
   if (!p.success) return { error: p.error.issues[0].message };
+  try {
+    exigirFondo(u, p.data.fondo, "aprobar");
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
   const saldoInicial = leerPesos(form.get("saldoInicial"));
   if (!Number.isFinite(saldoInicial)) return { error: "Escriba el saldo inicial (puede ser 0)" };
   const [c] = await db
@@ -61,13 +78,18 @@ const movSchema = z.object({
 
 /** Registra un movimiento manual; queda "por aprobar". Devuelve el id para subir los soportes. */
 export async function registrarMovimiento(form: FormData): Promise<{ error?: string; id?: string }> {
-  const u = await requerirPermiso("tesoreria", "crear");
+  const u = await requerirUsuario();
   const p = movSchema.safeParse(Object.fromEntries(form));
   if (!p.success) return { error: p.error.issues[0].message };
   const valor = leerPesos(form.get("valor"));
   if (!Number.isFinite(valor) || valor <= 0) return { error: "Escriba un valor mayor a cero" };
   const cuenta = await db.query.cuentas.findFirst({ where: and(eq(C.id, p.data.cuentaId), eq(C.activa, true)) });
   if (!cuenta) return { error: "La cuenta no existe o está inactiva" };
+  try {
+    exigirFondo(u, cuenta.fondo as Fondo, "crear");
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
   if (!(CATEGORIAS_POR_FONDO[cuenta.fondo as Fondo][p.data.tipo] as readonly string[]).includes(p.data.categoria))
     return { error: "Esa categoría no corresponde a la cuenta elegida" };
 
@@ -81,7 +103,8 @@ export async function registrarMovimiento(form: FormData): Promise<{ error?: str
 }
 
 export async function aprobarMovimiento(id: string) {
-  const u = await requerirPermiso("tesoreria", "aprobar");
+  const u = await requerirUsuario();
+  exigirFondo(u, await fondoDeMovimiento(id), "aprobar");
   const r = await db
     .update(M)
     .set({ estado: "aprobado", aprobadoPor: u.id, cargoAprobacion: await cargoDe(u.id), aprobadoEn: new Date() })
@@ -92,7 +115,8 @@ export async function aprobarMovimiento(id: string) {
 }
 
 export async function rechazarMovimiento(id: string, motivo: string) {
-  const u = await requerirPermiso("tesoreria", "aprobar");
+  const u = await requerirUsuario();
+  exigirFondo(u, await fondoDeMovimiento(id), "aprobar");
   if (motivo.trim().length < 3) throw new Error("Escriba el motivo del rechazo");
   const r = await db
     .update(M)
@@ -105,7 +129,8 @@ export async function rechazarMovimiento(id: string, motivo: string) {
 
 /** Anula un movimiento aprobado (queda visible como anulado; no se borra). */
 export async function anularMovimiento(id: string, motivo: string) {
-  const u = await requerirPermiso("tesoreria", "aprobar");
+  const u = await requerirUsuario();
+  exigirFondo(u, await fondoDeMovimiento(id), "aprobar");
   if (motivo.trim().length < 3) throw new Error("Escriba el motivo de la anulación");
   const m = await db.query.movimientos.findFirst({ where: eq(M.id, id) });
   if (!m || m.estado !== "aprobado") throw new Error("Solo se pueden anular movimientos aprobados");
@@ -125,9 +150,14 @@ const editarCuentaSchema = z.object({
 
 /** Corrige los datos de una cuenta. El saldo inicial no se toca aquí (afectaría lo publicado). */
 export async function editarCuenta(_: Estado, form: FormData): Promise<Estado> {
-  const u = await requerirPermiso("tesoreria", "aprobar");
+  const u = await requerirUsuario();
   const p = editarCuentaSchema.safeParse(Object.fromEntries(form));
   if (!p.success) return { error: p.error.issues[0].message };
+  try {
+    exigirFondo(u, await fondoDeCuenta(p.data.id), "aprobar");
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
   const datos = { nombre: p.data.nombre, entidad: p.data.entidad || null, ultimosDigitos: p.data.ultimosDigitos || null, activa: p.data.activa === "si" };
   await db.update(C).set(datos).where(eq(C.id, p.data.id));
   await auditar(u.id, "editar", "cuenta", String(p.data.id), datos);
@@ -137,8 +167,13 @@ export async function editarCuenta(_: Estado, form: FormData): Promise<Estado> {
 
 /** Corrige el saldo inicial dejando el motivo en la bitácora (queda trazable). */
 export async function corregirSaldoInicial(_: Estado, form: FormData): Promise<Estado> {
-  const u = await requerirPermiso("tesoreria", "aprobar");
+  const u = await requerirUsuario();
   const id = Number(form.get("id"));
+  try {
+    exigirFondo(u, await fondoDeCuenta(id), "aprobar");
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
   const saldo = leerPesos(form.get("saldoInicial"));
   const motivo = String(form.get("motivo") ?? "").trim();
   if (!Number.isFinite(saldo)) return { error: "Escriba el saldo" };

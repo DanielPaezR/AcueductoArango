@@ -2,19 +2,21 @@ import { Globe, Landmark, Plus } from "lucide-react";
 import Link from "next/link";
 import { CompartirPublica } from "@/components/compartir-publica";
 import { FilaMovimiento } from "@/components/lista-movimientos";
-import { FONDOS, pesos, type Fondo } from "@/lib/dinero";
+import { pesos, type Fondo } from "@/lib/dinero";
 import { cuentasConSaldo, listarMovimientos } from "@/lib/finanzas";
-import { puede } from "@/lib/permisos";
-import { requerirPermiso } from "@/lib/session";
+import { fondosPermitidos } from "@/lib/permisos";
+import { requerirAlgunFondo } from "@/lib/session";
 import { AccionesMovimiento } from "./acciones";
 
 export const metadata = { title: "Tesorería" };
 
 export default async function Tesoreria({ searchParams }: PageProps<"/tesoreria">) {
-  const u = await requerirPermiso("tesoreria", "ver");
+  const { u, fondos: visibles } = await requerirAlgunFondo("ver");
   const sp = await searchParams;
-  const fondo: Fondo = sp.fondo === "junta" ? "junta" : "acueducto";
-  const puedeAprobar = puede(u, "tesoreria", "aprobar");
+  // Solo los fondos que este usuario puede ver; si pide otro, se le muestra el primero permitido
+  const fondo: Fondo = visibles.includes(sp.fondo as Fondo) ? (sp.fondo as Fondo) : visibles[0];
+  const puedeAprobar = fondosPermitidos(u, "aprobar").includes(fondo);
+  const puedeCrear = fondosPermitidos(u, "crear").includes(fondo);
   const [todas, porAprobarTodos, recientes] = await Promise.all([
     cuentasConSaldo(),
     listarMovimientos({ estados: ["pendiente"], limite: 200 }),
@@ -22,21 +24,23 @@ export default async function Tesoreria({ searchParams }: PageProps<"/tesoreria"
   ]);
   const cuentas = todas.filter((c) => c.fondo === fondo);
   const porAprobar = porAprobarTodos.filter((m) => m.fondo === fondo);
+  const titulo = visibles.length > 1 ? "Tesorería" : fondo === "acueducto" ? "Tesorería del acueducto" : "Tesorería de la Junta";
   const pendientesDe = (f: Fondo) => porAprobarTodos.filter((m) => m.fondo === f).length;
   const total = cuentas.filter((c) => c.activa).reduce((a, c) => a + c.saldo, 0);
 
   return (
     <div className="mx-auto max-w-3xl space-y-7">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-[1.75rem] leading-tight font-bold">Tesorería</h1>
+        <h1 className="text-[1.75rem] leading-tight font-bold">{titulo}</h1>
         <Link href="/transparencia" className="btn-secundario" target="_blank">
           <Globe className="size-5" aria-hidden />
           Ver página pública
         </Link>
       </div>
 
+      {visibles.length > 1 && (
       <nav className="grid grid-cols-2 gap-1 rounded-xl bg-stone-200 p-1" aria-label="Fondo">
-        {(Object.keys(FONDOS) as Fondo[]).map((f) => (
+        {visibles.map((f) => (
           <Link
             key={f}
             href={`/tesoreria?fondo=${f}`}
@@ -50,6 +54,7 @@ export default async function Tesoreria({ searchParams }: PageProps<"/tesoreria"
           </Link>
         ))}
       </nav>
+      )}
 
       <section aria-labelledby="cuentas">
         <div className="mb-3 flex items-baseline justify-between gap-3">
@@ -90,7 +95,7 @@ export default async function Tesoreria({ searchParams }: PageProps<"/tesoreria"
         )}
       </section>
 
-      {cuentas.some((c) => c.activa) && puede(u, "tesoreria", "crear") && (
+      {cuentas.some((c) => c.activa) && puedeCrear && (
         <Link href={`/tesoreria/nuevo?fondo=${fondo}`} className="btn-primario min-h-14 w-full text-lg">
           <Plus className="size-6" aria-hidden />
           Registrar ingreso o gasto {fondo === "acueducto" ? "del acueducto" : "de la Junta"}

@@ -2,15 +2,15 @@ import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { fechaCorta, FONDOS, hoyBogota, pesos, type Fondo } from "@/lib/dinero";
 import { cuentasConSaldo } from "@/lib/finanzas";
-import { requerirPermiso } from "@/lib/session";
+import { requerirAlgunFondo } from "@/lib/session";
 import { CuentaForm, EditarCuentaForm } from "./cuenta-form";
 
 export const metadata = { title: "Cuentas" };
 
 export default async function Cuentas({ searchParams }: PageProps<"/tesoreria/cuentas">) {
-  await requerirPermiso("tesoreria", "aprobar");
+  const { fondos } = await requerirAlgunFondo("aprobar");
   const { fondo } = await searchParams;
-  const cuentas = await cuentasConSaldo();
+  const cuentas = (await cuentasConSaldo()).filter((c) => fondos.includes(c.fondo as Fondo));
   return (
     <div className="mx-auto max-w-2xl space-y-5">
       <Link href="/tesoreria" className="inline-flex items-center gap-1 font-semibold text-marca-700 hover:underline">
@@ -41,7 +41,7 @@ export default async function Cuentas({ searchParams }: PageProps<"/tesoreria/cu
         <p className="mb-4 text-stone-600">
           Escriba el saldo que tiene la cuenta hoy según el extracto. Desde esa fecha, cada movimiento se registra en el sistema.
         </p>
-        <CuentaForm hoy={hoyBogota()} fondo={fondo === "junta" ? "junta" : "acueducto"} />
+        <CuentaForm hoy={hoyBogota()} fondos={fondos} fondo={fondos.includes(fondo as Fondo) ? (fondo as Fondo) : fondos[0]} />
       </section>
     </div>
   );

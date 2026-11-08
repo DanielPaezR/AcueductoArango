@@ -11,7 +11,8 @@ export const SECCIONES = {
   mantenimientos: "Mantenimientos y compras",
   suscriptores: "Suscriptores del acueducto",
   facturacion: "Cobros y pagos",
-  tesoreria: "Tesorería (cuentas y movimientos)",
+  tesoreria: "Tesorería del acueducto",
+  tesoreria_junta: "Tesorería de la Junta",
   reportes: "Reportes y exportaciones",
   usuarios: "Usuarios del sistema",
 } as const;
@@ -26,7 +27,19 @@ export const ACCIONES = {
 
 /** Acciones que aplican a cada sección (la matriz solo muestra estas). */
 export function accionesDe(seccion: string): Accion[] {
-  return seccion === "tesoreria" ? ["ver", "crear", "editar", "aprobar"] : ["ver", "crear", "editar", "eliminar"];
+  return seccion === "tesoreria" || seccion === "tesoreria_junta" ? ["ver", "crear", "editar", "aprobar"] : ["ver", "crear", "editar", "eliminar"];
+}
+
+/** Cada fondo tiene su propia sección de permisos: el mismo cargo puede manejar uno, otro o ambos. */
+export type FondoPermiso = "acueducto" | "junta";
+export const seccionFondo = (f: FondoPermiso): Seccion => (f === "junta" ? "tesoreria_junta" : "tesoreria");
+
+/** Fondos en los que el usuario puede hacer la acción. */
+export function fondosPermitidos(
+  usuario: { rol: string; permisos: Permisos | Record<string, string[]> },
+  accion: Accion = "ver",
+): FondoPermiso[] {
+  return (["acueducto", "junta"] as const).filter((f) => puede(usuario, seccionFondo(f), accion));
 }
 
 export type Seccion = keyof typeof SECCIONES;
@@ -57,6 +70,7 @@ export const PLANTILLAS: Record<Rol, Permisos> = {
     suscriptores: TODO,
     facturacion: VCE,
     tesoreria: ["ver", "crear", "editar", "aprobar"],
+    tesoreria_junta: ["ver", "crear", "editar", "aprobar"],
     reportes: ["ver"],
   },
   fontanero: {
@@ -73,6 +87,7 @@ export const PLANTILLAS: Record<Rol, Permisos> = {
     suscriptores: ["ver"],
     facturacion: VCE,
     tesoreria: ["ver", "crear"],
+    tesoreria_junta: ["ver", "crear"],
     reportes: ["ver"],
   },
   suscriptor: {},

@@ -3,7 +3,7 @@ import { db, schema } from "@/db";
 import { usuarioApi } from "@/lib/api";
 import { auditar } from "@/lib/auditoria";
 import { cloudinaryConfigurado, subirArchivo } from "@/lib/cloudinary";
-import type { Seccion } from "@/lib/permisos";
+import { puede, seccionFondo, type Seccion } from "@/lib/permisos";
 
 /** Qué permiso se necesita para adjuntar archivos a cada tipo de entidad. */
 const SECCION_POR_ENTIDAD: Record<string, Seccion> = {
@@ -37,8 +37,18 @@ export async function POST(req: Request) {
   if (!seccion || !UUID.test(id) || !UUID.test(entidadId))
     return Response.json({ error: "Datos inválidos" }, { status: 400 });
 
-  const u = await usuarioApi(seccion, "crear");
+  const u = await usuarioApi(entidad === "movimiento" ? undefined : seccion, "crear");
   if (u instanceof Response) return u;
+  // Soportes de tesorería: el permiso depende del fondo (acueducto o Junta) de la cuenta del movimiento
+  if (entidad === "movimiento") {
+    const [m] = await db
+      .select({ fondo: schema.cuentas.fondo })
+      .from(schema.movimientos)
+      .innerJoin(schema.cuentas, eq(schema.cuentas.id, schema.movimientos.cuentaId))
+      .where(eq(schema.movimientos.id, entidadId));
+    if (!m || !puede(u, seccionFondo(m.fondo as "acueducto" | "junta"), "crear"))
+      return Response.json({ error: "No tiene permiso para adjuntar soportes en ese fondo" }, { status: 403 });
+  }
 
   // Idempotencia: si ya se subió (reintento), responder ok
   const previo = await db.query.adjuntos.findFirst({ where: eq(schema.adjuntos.id, id) });

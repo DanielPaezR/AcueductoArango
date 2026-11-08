@@ -3,15 +3,18 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { hoyBogota } from "@/lib/dinero";
 import { cuentasConSaldo } from "@/lib/finanzas";
-import { requerirPermiso } from "@/lib/session";
+import { requerirAlgunFondo } from "@/lib/session";
 import { MovimientoForm } from "./movimiento-form";
 
 export const metadata = { title: "Registrar movimiento" };
 
 export default async function NuevoMovimiento({ searchParams }: PageProps<"/tesoreria/nuevo">) {
-  await requerirPermiso("tesoreria", "crear");
+  const { fondos } = await requerirAlgunFondo("crear");
   const { fondo } = await searchParams;
-  const cuentas = (await cuentasConSaldo(true)).map((c) => ({ id: c.id, nombre: c.nombre, fondo: c.fondo as "acueducto" | "junta" }));
+  // Solo las cuentas de los fondos donde este usuario puede registrar
+  const cuentas = (await cuentasConSaldo(true))
+    .filter((c) => fondos.includes(c.fondo as "acueducto" | "junta"))
+    .map((c) => ({ id: c.id, nombre: c.nombre, fondo: c.fondo as "acueducto" | "junta" }));
   if (!cuentas.length) redirect("/tesoreria");
   return (
     <div className="mx-auto max-w-2xl space-y-5">

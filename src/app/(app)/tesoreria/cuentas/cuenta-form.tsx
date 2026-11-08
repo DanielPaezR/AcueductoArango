@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { corregirSaldoInicial, crearCuenta, editarCuenta } from "@/actions/tesoreria";
 
-export function CuentaForm({ hoy, fondo }: { hoy: string; fondo?: "acueducto" | "junta" }) {
+export function CuentaForm({ hoy, fondo, fondos }: { hoy: string; fondo?: "acueducto" | "junta"; fondos: ("acueducto" | "junta")[] }) {
   const [estado, accion, pendiente] = useActionState(crearCuenta, undefined);
   return (
     <form action={accion} className="space-y-4" key={estado?.ok}>
@@ -13,7 +13,9 @@ export function CuentaForm({ hoy, fondo }: { hoy: string; fondo?: "acueducto" | 
           {([
             ["acueducto", "Del acueducto"],
             ["junta", "De la Junta"],
-          ] as const).map(([v, l]) => (
+          ] as const)
+            .filter(([v]) => fondos.includes(v))
+            .map(([v, l]) => (
             <label key={v} className="flex min-h-12 cursor-pointer items-center gap-2 rounded-lg border border-stone-300 bg-white px-3 font-semibold has-[:checked]:border-marca-700 has-[:checked]:bg-marca-50 has-[:checked]:text-marca-900">
               <input type="radio" name="fondo" value={v} defaultChecked={(fondo ?? "acueducto") === v} className="size-5 accent-marca-700" />
               {l}

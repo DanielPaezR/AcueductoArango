@@ -9,7 +9,9 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const u = await requerirUsuario();
   // Nadie usa el sistema sin aceptar los términos y el compromiso de confidencialidad vigentes
   if (u.terminosVersion !== VERSION_TERMINOS) redirect("/aceptar");
-  const items = NAV.filter((i) => !i.seccion || puede(u, i.seccion, "ver"));
+  const items = NAV.filter(
+    (i) => (!i.seccion || puede(u, i.seccion, "ver")) && (!i.secciones || i.secciones.some((x) => puede(u, x, "ver"))),
+  );
   return (
     <Shell
       items={items}

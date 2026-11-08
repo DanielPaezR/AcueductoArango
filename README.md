@@ -60,6 +60,10 @@ crear un usuario se aplica la plantilla de su rol; el superadmin puede ajustarla
 | Tesorero | Cobros y pagos; registrar movimientos (los aprueba la presidencia); reportes. |
 | Suscriptor | Reservado para un portal futuro (hoy se usa la consulta pública por cédula). |
 
+La tesorería tiene **dos secciones de permisos independientes**: *Tesorería del acueducto* y *Tesorería de la
+Junta*. Así el mismo cargo (p. ej. tesorera) puede manejar solo uno de los fondos o ambos; quien no tiene
+acceso a un fondo no ve sus cuentas, no puede registrar ni aprobar en él, ni descargar sus movimientos.
+
 El campo **cargo** del usuario (p. ej. "Presidenta", "Tesorera") es lo que aparece en la página pública.
 
 ## 3. Guía de uso por rol

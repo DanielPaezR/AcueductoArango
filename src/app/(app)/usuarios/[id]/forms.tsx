@@ -2,9 +2,9 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { cambiarEstadoUsuario, editarUsuario, restablecerPassword } from "@/actions/usuarios";
-import { ACCIONES, PLANTILLAS, ROLES, SECCIONES, type Rol } from "@/lib/permisos";
+import { accionesDe, ACCIONES, PLANTILLAS, ROLES, SECCIONES, type Accion, type Rol } from "@/lib/permisos";
 
-type U = { id: string; nombre: string; username: string; telefono: string; rol: string; permisos: Record<string, string[]> };
+type U = { id: string; nombre: string; username: string; telefono: string; cargo: string; rol: string; permisos: Record<string, string[]> };
 
 export function EditarUsuarioForm({
   usuario,
@@ -37,6 +37,11 @@ export function EditarUsuarioForm({
         <div>
           <label className="label">Teléfono</label>
           <input name="telefono" className="input" defaultValue={usuario.telefono} disabled={!editable} />
+        </div>
+        <div>
+          <label className="label">Cargo en la Junta</label>
+          <input name="cargo" className="input" placeholder="Ej: Presidenta, Tesorera, Fontanero" defaultValue={usuario.cargo} disabled={!editable} />
+          <p className="mt-1 text-sm text-stone-600">Es lo que aparece en la página pública de cuentas.</p>
         </div>
         <div>
           <label className="label">Rol</label>
@@ -76,15 +81,20 @@ export function EditarUsuarioForm({
                 {Object.entries(SECCIONES).map(([s, label]) => (
                   <tr key={s} className="border-t border-stone-100">
                     <td className="py-2 pr-2">{label}</td>
-                    {Object.keys(ACCIONES).map((a) => (
+                    {(Object.keys(ACCIONES) as Accion[]).map((a) => (
                       <td key={a} className="px-2 py-2 text-center">
+                        {accionesDe(s).includes(a) ? (
                         <input
                           type="checkbox"
                           name={`p.${s}.${a}`}
                           defaultChecked={permisos[s]?.includes(a)}
                           disabled={!editable}
                           className="size-6 accent-marca-700"
+                          aria-label={`${ACCIONES[a]}: ${label}`}
                         />
+                        ) : (
+                          <span className="text-stone-300" aria-hidden>—</span>
+                        )}
                       </td>
                     ))}
                   </tr>

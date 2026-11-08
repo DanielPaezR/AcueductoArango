@@ -5,7 +5,7 @@ import { NextResponse, type NextRequest } from "next/server";
  * La verificación real (firma, usuario activo, permisos) se hace en el servidor
  * en cada página/acción con `requerirUsuario` / `requerirPermiso`.
  */
-const PUBLICAS = ["/login"];
+const PUBLICAS = ["/login", "/transparencia"];
 
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;

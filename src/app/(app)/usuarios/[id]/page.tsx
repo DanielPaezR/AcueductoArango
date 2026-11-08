@@ -32,6 +32,7 @@ export default async function UsuarioDetalle({ params }: PageProps<"/usuarios/[i
             nombre: u.nombre,
             username: u.username,
             telefono: u.telefono ?? "",
+            cargo: u.cargo ?? "",
             rol: u.rol,
             permisos: u.permisos,
           }}

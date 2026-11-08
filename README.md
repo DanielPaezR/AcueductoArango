@@ -1,4 +1,4 @@
-# Vereda — Sistema de Información JAC y Acueducto
+# JAC Arango — Sistema de información de la JAC y el acueducto
 
 Censo georreferenciado de viviendas y personas de la vereda, mapa satelital, registro de
 ayudas y proyectos, mapa de la red del acueducto, mantenimientos (fontanero) y facturación
@@ -29,7 +29,9 @@ inicializada desde la plantilla del rol (`src/lib/permisos.ts`).
 - [x] **0. Base**: login, roles/permisos, usuarios, auditoría, despliegue
 - [x] **1. Censo**: viviendas, personas, sectores, mapa satelital, captura GPS, modo offline (PWA)
 - [ ] **2. Acueducto**: elementos de red, tuberías, mantenimientos y compras (Cloudinary)
-- [ ] **3. Facturación**: tarifas históricas, generación mensual, pagos, estados de cuenta, recibos PDF
+- [x] **3. Cobros y tesorería**: suscriptores desde el censo, tarifas con historial, mensualidad, pagos, estado de cuenta, cuentas y movimientos con aprobación, página pública `/transparencia`
+- [ ] **2. Red del acueducto y fontanero** (pendiente)
+- [ ] Recibos en PDF / impresión
 - [ ] **4. Ayudas/proyectos y reportes** (Excel)
 - [ ] **5. Portal del suscriptor**
 

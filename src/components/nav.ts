@@ -9,6 +9,8 @@ export type NombreIcono =
   | "mantenimientos"
   | "suscriptores"
   | "facturacion"
+  | "tesoreria"
+  | "transparencia"
   | "reportes"
   | "usuarios";
 
@@ -22,8 +24,10 @@ export const NAV: ItemNav[] = [
   { href: "/ayudas", label: "Ayudas y proyectos", icono: "ayudas", seccion: "ayudas", fase: 4 },
   { href: "/acueducto", label: "Red del acueducto", icono: "acueducto", seccion: "acueducto_red", fase: 2 },
   { href: "/mantenimientos", label: "Mantenimientos", icono: "mantenimientos", seccion: "mantenimientos", fase: 2 },
-  { href: "/suscriptores", label: "Suscriptores", icono: "suscriptores", seccion: "suscriptores", fase: 3 },
-  { href: "/facturacion", label: "Cobros y pagos", icono: "facturacion", seccion: "facturacion", fase: 3 },
+  { href: "/suscriptores", label: "Suscriptores", icono: "suscriptores", seccion: "suscriptores" },
+  { href: "/facturacion", label: "Cobros del mes", icono: "facturacion", seccion: "facturacion" },
+  { href: "/tesoreria", label: "Tesorería", icono: "tesoreria", seccion: "tesoreria" },
+  { href: "/transparencia", label: "Página pública", icono: "transparencia" },
   { href: "/reportes", label: "Reportes", icono: "reportes", seccion: "reportes", fase: 4 },
   { href: "/usuarios", label: "Usuarios", icono: "usuarios", seccion: "usuarios" },
 ];

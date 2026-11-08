@@ -68,6 +68,8 @@ export const usuarios = pgTable("usuarios", {
   telefono: varchar("telefono", { length: 30 }),
   passwordHash: text("password_hash").notNull(),
   rol: rolEnum("rol").notNull(),
+  /** Cargo en la Junta (p.ej. "Presidenta", "Tesorera"). Es lo que se muestra en la página pública. */
+  cargo: varchar("cargo", { length: 60 }),
   permisos: jsonb("permisos").$type<Record<string, string[]>>().notNull().default({}),
   activo: boolean("activo").notNull().default(true),
   debeCambiarPassword: boolean("debe_cambiar_password").notNull().default(true),
@@ -331,9 +333,15 @@ export const materialesUsados = pgTable("materiales_usados", {
 /* Acueducto: suscriptores y facturación (tarifa fija mensual)         */
 /* ------------------------------------------------------------------ */
 
+export const suscriptorCodigoSeq = pgSequence("suscriptor_codigo_seq", { startWith: 1 });
+
 export const suscriptores = pgTable("suscriptores", {
   id: uuid("id").primaryKey().defaultRandom(),
-  codigo: varchar("codigo", { length: 20 }).notNull().unique(), // "S-0045"
+  /** Número de matrícula si la tiene; si no, "S-0001" consecutivo. */
+  codigo: varchar("codigo", { length: 30 })
+    .notNull()
+    .unique()
+    .default(sql`'S-' || lpad(nextval('suscriptor_codigo_seq')::text, 4, '0')`),
   viviendaId: uuid("vivienda_id")
     .notNull()
     .references(() => viviendas.id),
@@ -412,6 +420,8 @@ export const pagos = pgTable(
     fecha: date("fecha").notNull(),
     valor: numeric("valor", { precision: 14, scale: 2 }).notNull(),
     medio: varchar("medio", { length: 20 }).notNull().default("efectivo"), // efectivo, transferencia, nequi, daviplata, consignacion
+    /** Cuenta de tesorería donde entró el dinero. */
+    cuentaId: integer("cuenta_id").references(() => cuentas.id),
     referencia: varchar("referencia", { length: 80 }),
     observaciones: text("observaciones"),
     anulado: boolean("anulado").notNull().default(false),
@@ -420,6 +430,55 @@ export const pagos = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [index("pagos_suscriptor_idx").on(t.suscriptorId)],
+);
+
+/* ------------------------------------------------------------------ */
+/* Tesorería del acueducto (pública en /transparencia)                 */
+/* ------------------------------------------------------------------ */
+
+export const cuentas = pgTable("cuentas", {
+  id: serial("id").primaryKey(),
+  nombre: varchar("nombre", { length: 80 }).notNull(), // "Cuenta de ahorros Bancolombia"
+  tipo: varchar("tipo", { length: 20 }).notNull().default("banco"), // banco, efectivo, billetera
+  entidad: varchar("entidad", { length: 60 }),
+  /** Solo los últimos dígitos: la página pública no debe exponer el número completo. */
+  ultimosDigitos: varchar("ultimos_digitos", { length: 6 }),
+  saldoInicial: numeric("saldo_inicial", { precision: 14, scale: 2 }).notNull().default("0"),
+  fechaSaldoInicial: date("fecha_saldo_inicial").notNull(),
+  activa: boolean("activa").notNull().default(true),
+  createdBy: uuid("created_by").references(() => usuarios.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+/**
+ * Movimientos de dinero. Nada se borra: se rechaza o se anula con motivo.
+ * Solo los aprobados cuentan para el saldo y aparecen como definitivos en la página pública.
+ * Se guarda el CARGO de quien registra/aprueba en ese momento (es lo que se publica).
+ */
+export const movimientos = pgTable(
+  "movimientos",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    cuentaId: integer("cuenta_id")
+      .notNull()
+      .references(() => cuentas.id),
+    tipo: varchar("tipo", { length: 10 }).notNull(), // ingreso, egreso
+    categoria: varchar("categoria", { length: 40 }).notNull(),
+    concepto: varchar("concepto", { length: 300 }).notNull(),
+    valor: numeric("valor", { precision: 14, scale: 2 }).notNull(), // siempre positivo
+    fecha: date("fecha").notNull(),
+    estado: varchar("estado", { length: 12 }).notNull().default("pendiente"), // pendiente, aprobado, rechazado, anulado
+    origen: varchar("origen", { length: 10 }).notNull().default("manual"), // manual, pago
+    pagoId: uuid("pago_id").references(() => pagos.id),
+    registradoPor: uuid("registrado_por").references(() => usuarios.id),
+    cargoRegistro: varchar("cargo_registro", { length: 60 }),
+    aprobadoPor: uuid("aprobado_por").references(() => usuarios.id),
+    cargoAprobacion: varchar("cargo_aprobacion", { length: 60 }),
+    aprobadoEn: timestamp("aprobado_en", { withTimezone: true }),
+    motivo: text("motivo"), // de rechazo o anulación
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index("movimientos_cuenta_idx").on(t.cuentaId), index("movimientos_fecha_idx").on(t.fecha)],
 );
 
 /* ------------------------------------------------------------------ */

@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { auditar } from "@/lib/auditoria";
-import { ACCIONES, PLANTILLAS, ROLES, SECCIONES, type Permisos, type Rol } from "@/lib/permisos";
+import { accionesDe, PLANTILLAS, ROLES, SECCIONES, type Permisos, type Rol } from "@/lib/permisos";
 import { requerirPermiso } from "@/lib/session";
 import type { Estado } from "./auth";
 
@@ -16,7 +16,7 @@ const rolSchema = z.enum(Object.keys(ROLES) as [Rol, ...Rol[]]);
 function leerPermisos(form: FormData): Permisos {
   const p: Record<string, string[]> = {};
   for (const s of Object.keys(SECCIONES))
-    for (const a of Object.keys(ACCIONES))
+    for (const a of accionesDe(s))
       if (form.get(`p.${s}.${a}`) === "on") (p[s] ??= []).push(a);
   return p as Permisos;
 }
@@ -34,6 +34,7 @@ const crearSchema = z.object({
     .toLowerCase()
     .regex(/^[a-z0-9._-]{3,40}$/, "Usuario: 3–40 caracteres, solo letras, números, punto, guion"),
   telefono: z.string().trim().optional(),
+  cargo: z.string().trim().max(60).optional(),
   rol: rolSchema,
   password: z.string().min(8, "La contraseña temporal debe tener al menos 8 caracteres"),
 });
@@ -59,6 +60,7 @@ export async function crearUsuario(_: Estado, form: FormData): Promise<Estado> {
       nombre: p.data.nombre,
       username: p.data.username,
       telefono: p.data.telefono || null,
+      cargo: p.data.cargo || null,
       rol: p.data.rol,
       permisos: PLANTILLAS[p.data.rol] as Record<string, string[]>,
       passwordHash: await bcrypt.hash(p.data.password, 12),
@@ -74,6 +76,7 @@ const editarSchema = z.object({
   id: z.uuid(),
   nombre: z.string().trim().min(3),
   telefono: z.string().trim().optional(),
+  cargo: z.string().trim().max(60).optional(),
   rol: rolSchema,
   usarPlantilla: z.string().optional(),
 });
@@ -101,6 +104,7 @@ export async function editarUsuario(_: Estado, form: FormData): Promise<Estado> 
     .set({
       nombre: p.data.nombre,
       telefono: p.data.telefono || null,
+      cargo: p.data.cargo || null,
       rol: p.data.rol,
       permisos: permisos as Record<string, string[]>,
       updatedAt: new Date(),

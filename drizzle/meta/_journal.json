@@ -22,6 +22,13 @@
       "when": 1794149237997,
       "tag": "0002_formulario_visita",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794151623065,
+      "tag": "0003_tesoreria",
+      "breakpoints": true
     }
   ]
 }

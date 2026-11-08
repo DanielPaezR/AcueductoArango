@@ -3,7 +3,9 @@
 import {
   ClipboardList,
   Droplets,
+  Globe,
   HandHeart,
+  Landmark,
   House,
   Map,
   Receipt,
@@ -24,6 +26,8 @@ export const ICONOS: Record<NombreIcono, LucideIcon> = {
   mantenimientos: Wrench,
   suscriptores: ClipboardList,
   facturacion: Receipt,
+  tesoreria: Landmark,
+  transparencia: Globe,
   reportes: ChartColumn,
   usuarios: ShieldUser,
 };

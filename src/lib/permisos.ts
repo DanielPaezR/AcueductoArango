@@ -10,7 +10,8 @@ export const SECCIONES = {
   acueducto_red: "Mapa del acueducto (red)",
   mantenimientos: "Mantenimientos y compras",
   suscriptores: "Suscriptores del acueducto",
-  facturacion: "Facturación y pagos",
+  facturacion: "Cobros y pagos",
+  tesoreria: "Tesorería (cuentas y movimientos)",
   reportes: "Reportes y exportaciones",
   usuarios: "Usuarios del sistema",
 } as const;
@@ -20,7 +21,13 @@ export const ACCIONES = {
   crear: "Crear",
   editar: "Editar",
   eliminar: "Eliminar",
+  aprobar: "Aprobar",
 } as const;
+
+/** Acciones que aplican a cada sección (la matriz solo muestra estas). */
+export function accionesDe(seccion: string): Accion[] {
+  return seccion === "tesoreria" ? ["ver", "crear", "editar", "aprobar"] : ["ver", "crear", "editar", "eliminar"];
+}
 
 export type Seccion = keyof typeof SECCIONES;
 export type Accion = keyof typeof ACCIONES;
@@ -36,7 +43,7 @@ export const ROLES = {
 } as const;
 export type Rol = keyof typeof ROLES;
 
-const TODO: Accion[] = ["ver", "crear", "editar", "eliminar"];
+const TODO: Accion[] = ["ver", "crear", "editar", "eliminar", "aprobar"];
 const VCE: Accion[] = ["ver", "crear", "editar"];
 
 export const PLANTILLAS: Record<Rol, Permisos> = {
@@ -49,6 +56,7 @@ export const PLANTILLAS: Record<Rol, Permisos> = {
     mantenimientos: TODO,
     suscriptores: TODO,
     facturacion: VCE,
+    tesoreria: ["ver", "crear", "editar", "aprobar"],
     reportes: ["ver"],
   },
   fontanero: {
@@ -64,6 +72,7 @@ export const PLANTILLAS: Record<Rol, Permisos> = {
   tesorero: {
     suscriptores: ["ver"],
     facturacion: VCE,
+    tesoreria: ["ver", "crear"],
     reportes: ["ver"],
   },
   suscriptor: {},

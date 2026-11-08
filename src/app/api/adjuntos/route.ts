@@ -14,6 +14,7 @@ const SECCION_POR_ENTIDAD: Record<string, Seccion> = {
   mantenimiento: "mantenimientos",
   compra: "mantenimientos",
   pago: "facturacion",
+  movimiento: "tesoreria",
   proyecto: "ayudas",
   participacion: "ayudas",
 };

@@ -35,7 +35,8 @@ Built for one specific vereda and its JAC, by and for the community: the data is
 ## Capabilities and Constraints
 - Spanish (Colombia) only. Currency COP. Dates in America/Bogota.
 - Must work well on low-end Android phones over slow connections; installable PWA.
-- Built: login/roles/users, census (houses, people, sectors), users map, offline sync.
+- Built: login/roles/users, census (houses, people, sectors), users map, offline sync, water billing (subscribers, rates, monthly charges, payments), treasury (accounts, movements with president approval) and a public transparency page.
+- Transparency rules (confirmed): the public page shows only the JAC position (cargo) of who registered/approved, never names; receipt photos are public; subscriber payment status is published only as aggregate counts.
 - Planned: water-network map and plumber module, billing, aid/projects, reports, subscriber portal.
 - Undecided: final brand colors (user asked to reference the flag of Concepción, Antioquia; exact colors not yet confirmed).
 

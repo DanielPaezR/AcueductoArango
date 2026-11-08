@@ -22,6 +22,10 @@ export function NuevoUsuarioForm({ puedeSuperadmin }: { puedeSuperadmin: boolean
         <input name="telefono" className="input" defaultValue={v.telefono} inputMode="tel" />
       </div>
       <div>
+        <label className="label">Cargo en la Junta (opcional)</label>
+        <input name="cargo" className="input" defaultValue={v.cargo} placeholder="Ej: Presidenta, Tesorera" />
+      </div>
+      <div>
         <label className="label">Rol</label>
         <select name="rol" className="input" defaultValue={v.rol ?? "encuestador"}>
           {Object.entries(ROLES)

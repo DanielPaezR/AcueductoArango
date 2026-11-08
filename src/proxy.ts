@@ -10,6 +10,9 @@ const PUBLICAS = ["/login"];
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const tieneSesion = req.cookies.has("vereda_session");
+  if (!tieneSesion && pathname.startsWith("/api/")) {
+    return Response.json({ error: "Sesión vencida. Vuelve a ingresar." }, { status: 401 });
+  }
   if (!tieneSesion && !PUBLICAS.some((p) => pathname.startsWith(p))) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
@@ -17,5 +20,5 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api/health|_next/static|_next/image|favicon.ico|manifest.webmanifest|icons/|sw.js).*)"],
+  matcher: ["/((?!api/health|_next/static|_next/image|favicon.ico|manifest.webmanifest|icons/|sw.js|offline.html).*)"],
 };

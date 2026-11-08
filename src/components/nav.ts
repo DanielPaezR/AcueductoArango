@@ -17,4 +17,4 @@ export const NAV: ItemNav[] = [
 ];
 
 /** Fase hasta la que ya hay pantallas construidas. */
-export const FASE_ACTUAL = 0;
+export const FASE_ACTUAL = 1;

@@ -24,7 +24,9 @@ import {
   serial,
   uniqueIndex,
   index,
+  pgSequence,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 /* ------------------------------------------------------------------ */
 /* Enums                                                               */
@@ -86,12 +88,16 @@ export const sectores = pgTable("sectores", {
   color: varchar("color", { length: 9 }),
 });
 
+export const viviendaCodigoSeq = pgSequence("vivienda_codigo_seq", { startWith: 1 });
+
 export const viviendas = pgTable(
   "viviendas",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    /** Código visible, p.ej. "V-0123". Se asigna en el servidor. */
-    codigo: varchar("codigo", { length: 20 }).unique(),
+    /** Código visible, p.ej. "V-0123". Lo asigna la base de datos al crear. */
+    codigo: varchar("codigo", { length: 20 })
+      .unique()
+      .default(sql`'V-' || lpad(nextval('vivienda_codigo_seq')::text, 4, '0')`),
     sectorId: integer("sector_id").references(() => sectores.id),
 
     // Ubicación

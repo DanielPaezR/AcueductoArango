@@ -4,6 +4,8 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: { default: "Vereda — JAC y Acueducto", template: "%s · Vereda" },
   description: "Censo, mapas y acueducto de la vereda",
+  icons: { icon: "/icons/icon-192.png", apple: "/icons/icon-192.png" },
+  appleWebApp: { capable: true, title: "Vereda", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

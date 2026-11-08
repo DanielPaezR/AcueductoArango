@@ -27,11 +27,20 @@ inicializada desde la plantilla del rol (`src/lib/permisos.ts`).
 
 ## Fases
 - [x] **0. Base**: login, roles/permisos, usuarios, auditoría, despliegue
-- [ ] **1. Censo**: viviendas, personas, mapa satelital, captura GPS offline
+- [x] **1. Censo**: viviendas, personas, sectores, mapa satelital, captura GPS, modo offline (PWA)
 - [ ] **2. Acueducto**: elementos de red, tuberías, mantenimientos y compras (Cloudinary)
 - [ ] **3. Facturación**: tarifas históricas, generación mensual, pagos, estados de cuenta, recibos PDF
 - [ ] **4. Ayudas/proyectos y reportes** (Excel)
 - [ ] **5. Portal del suscriptor**
+
+## Modo offline (cómo funciona)
+- La app es instalable (PWA). El service worker (`public/sw.js`) guarda las páginas visitadas, los
+  archivos de la app y las teselas del mapa que se hayan visto con señal.
+- Al registrar una vivienda, el formulario la guarda primero en el teléfono (IndexedDB, `src/lib/offline/`)
+  con un UUID generado en el celular, y luego intenta subirla a `/api/sync/vivienda` (idempotente).
+- Sin señal queda en "Pendientes"; se sube sola al volver la conexión (o con "Subir ahora").
+- Las fotos se comprimen en el teléfono (~1600 px) y se suben a Cloudinary vía `/api/adjuntos`.
+- Requisito: abrir la app con señal al menos una vez (con sesión iniciada) para que quede guardada.
 
 ## Desarrollo local
 ```bash

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { logout } from "@/actions/auth";
 import type { ItemNav } from "./nav";
+import { SyncStatus } from "./sync-status";
 
 export function Shell({
   items,
@@ -52,6 +53,7 @@ export function Shell({
 
   const pie = (
     <div className="border-t border-stone-200 p-3 text-sm">
+      <div className="-mx-3 -mt-3 pt-3"><SyncStatus /></div>
       <Link href="/cuenta" className="block rounded-lg px-3 py-2 hover:bg-stone-100" onClick={() => setAbierto(false)}>
         <div className="font-semibold text-stone-800">{usuario.nombre}</div>
         <div className="text-xs text-stone-500">{usuario.rolLabel}</div>
@@ -89,6 +91,7 @@ export function Shell({
             ☰
           </button>
           <span className="font-bold text-marca-800">🏡 Vereda</span>
+          <SyncStatus compacto />
         </header>
         <main className="flex-1 p-4 lg:p-8">{children}</main>
       </div>

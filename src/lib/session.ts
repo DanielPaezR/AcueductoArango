@@ -54,6 +54,7 @@ export type UsuarioSesion = {
   rol: string;
   permisos: Permisos;
   debeCambiarPassword: boolean;
+  terminosVersion: string | null;
 };
 
 /** Usuario actual (consulta la BD en cada request: un usuario desactivado pierde acceso de inmediato). */
@@ -69,6 +70,7 @@ export const usuarioActual = cache(async (): Promise<UsuarioSesion | null> => {
     rol: u.rol,
     permisos: u.permisos as Permisos,
     debeCambiarPassword: u.debeCambiarPassword,
+    terminosVersion: u.terminosVersion,
   };
 });
 

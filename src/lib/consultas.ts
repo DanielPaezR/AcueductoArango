@@ -79,6 +79,8 @@ export async function puntosMapa() {
       referencia: V.referencia,
       jefe: jefeSql,
       personas: numPersonasSql,
+      proyectos: sql<string[]>`coalesce((select array_agg(distinct pa.proyecto_id::text) from participaciones pa
+        where pa.vivienda_id = viviendas.id and pa.deleted_at is null), '{}')`,
     })
     .from(V)
     .where(isNull(V.deletedAt));
@@ -139,4 +141,15 @@ export async function resumenInicio() {
       .limit(5),
   ]);
   return { ...t, recientes };
+}
+
+/** Viviendas a menos de `metros` de un punto (para detectar casas registradas dos veces). */
+export async function viviendasCercanas(lat: number, lng: number, metros = 20, excluir?: string) {
+  const d = sql<number>`sqrt(power((${V.lat} - ${lat}) * 110574, 2) + power((${V.lng} - ${lng}) * 111320 * cos(radians(${lat})), 2))`;
+  return db
+    .select({ id: V.id, codigo: V.codigo, jefe: jefeSql, referencia: V.referencia, distancia: sql<number>`round(${d})::int` })
+    .from(V)
+    .where(and(isNull(V.deletedAt), sql`${d} < ${metros}`, excluir ? sql`${V.id} <> ${excluir}` : undefined))
+    .orderBy(d)
+    .limit(5);
 }

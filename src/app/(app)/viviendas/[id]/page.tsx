@@ -7,12 +7,15 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { TIPOS_PROYECTO } from "@/lib/ayudas";
 import { fechaCorta } from "@/lib/dinero";
-import { obtenerVivienda } from "@/lib/consultas";
+import { obtenerVivienda, viviendasCercanas } from "@/lib/consultas";
+import { mantenimientosDe } from "@/lib/consultas-red";
+import { HistorialArreglos } from "@/components/historial-arreglos";
 import { miniatura } from "@/lib/imagenes";
 import { edadPersona, ESTADO_VIVIENDA_LABEL } from "@/lib/opciones";
 import { puede } from "@/lib/permisos";
 import { requerirPermiso } from "@/lib/session";
-import { EliminarVivienda } from "./eliminar";
+import { EliminarVivienda, SuprimirDatos } from "./eliminar";
+import { urlPrivada } from "@/lib/cloudinary";
 
 export const metadata = { title: "Vivienda" };
 
@@ -35,6 +38,10 @@ export default async function FichaVivienda({ params }: PageProps<"/viviendas/[i
   if (!d) notFound();
   const { v, personas, adjuntos, sector, creador } = d;
   const jefe = personas.find((p) => p.esJefeHogar) ?? personas[0];
+  const [cercanas, arreglos] = await Promise.all([
+    viviendasCercanas(v.lat, v.lng, 20, v.id),
+    puede(u, "mantenimientos", "ver") ? mantenimientosDe({ viviendaId: id }) : Promise.resolve([]),
+  ]);
   const ayudas = puede(u, "ayudas", "ver")
     ? await db
         .select({ id: schema.participaciones.id, fecha: schema.participaciones.fecha, detalle: schema.participaciones.detalle, proyectoId: schema.proyectos.id, nombre: schema.proyectos.nombre, tipo: schema.proyectos.tipo })
@@ -43,6 +50,14 @@ export default async function FichaVivienda({ params }: PageProps<"/viviendas/[i
         .where(and(eq(schema.participaciones.viviendaId, id), isNull(schema.participaciones.deletedAt), isNull(schema.proyectos.deletedAt)))
     : [];
   const sinAutorizacion = !v.autorizacionDatos && personas.length > 0;
+  const fotos = adjuntos.filter((a) => a.tipo !== "firma");
+  const firma = adjuntos.find((a) => a.tipo === "firma");
+  let urlFirma: string | null = null;
+  try {
+    urlFirma = firma ? (firma.privado ? urlPrivada(firma.publicId) : firma.url) : null;
+  } catch {
+    urlFirma = null;
+  }
   const fmt = (f: Date) =>
     f.toLocaleDateString("es-CO", { timeZone: "America/Bogota", day: "numeric", month: "short", year: "numeric" });
   const nombreJefe = jefe ? `${jefe.nombres} ${jefe.apellidos ?? ""}`.trim() : null;
@@ -87,6 +102,21 @@ export default async function FichaVivienda({ params }: PageProps<"/viviendas/[i
           {puede(u, "censo", "eliminar") && <EliminarVivienda id={v.id} />}
         </div>
       </header>
+
+      {cercanas.length > 0 && (
+        <div className="rounded-lg bg-ocre-50 px-4 py-3 ring-1 ring-ocre-100" role="alert">
+          <p className="font-semibold text-ocre-800">Posible casa repetida: hay otros registros muy cerca.</p>
+          <ul className="mt-1 text-stone-800">
+            {cercanas.map((c) => (
+              <li key={c.id}>
+                <Link href={`/viviendas/${c.id}`} className="font-semibold underline">{c.codigo} · {c.jefe ?? "Sin familia"}</Link> a{" "}
+                <span className="num">{c.distancia}</span> m
+              </li>
+            ))}
+          </ul>
+          <p className="mt-1 text-sm text-stone-700">Si son la misma casa, deje la más completa y elimine la otra.</p>
+        </div>
+      )}
 
       <div className="grid gap-5 md:grid-cols-[1.15fr_1fr]">
         <section className="tarjeta space-y-3" aria-label="Ubicación">
@@ -213,6 +243,10 @@ export default async function FichaVivienda({ params }: PageProps<"/viviendas/[i
         )}
       </section>
 
+      {v.usaAcueducto && puede(u, "mantenimientos", "ver") && (
+        <HistorialArreglos items={arreglos} nuevoHref={puede(u, "mantenimientos", "crear") ? `/mantenimientos/nuevo?vivienda=${id}` : undefined} />
+      )}
+
       {ayudas.length > 0 && (
         <section className="tarjeta" aria-labelledby="ayudas">
           <h2 id="ayudas" className="mb-2 text-lg font-bold">Ayudas y proyectos</h2>
@@ -230,11 +264,43 @@ export default async function FichaVivienda({ params }: PageProps<"/viviendas/[i
         </section>
       )}
 
-      {adjuntos.length > 0 && (
+      <section className="tarjeta" aria-labelledby="autorizacion">
+        <h2 id="autorizacion" className="mb-2 text-lg font-bold">Autorización de datos personales</h2>
+        {v.datosSuprimidosEn ? (
+          <p className="text-stone-700">
+            Los datos personales de esta familia se suprimieron el{" "}
+            <span className="num">{v.datosSuprimidosEn.toLocaleDateString("es-CO", { timeZone: "America/Bogota" })}</span> a petición del titular.
+          </p>
+        ) : v.autorizacionDatos ? (
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+            <Dato l="Autorizó" v={[v.autorizacionNombre, v.autorizacionDocumento && `C.C. ${v.autorizacionDocumento}`].filter(Boolean).join(" · ")} />
+            <Dato l="Cómo" v={v.autorizacionMedio === "firma" ? "Con firma" : v.autorizacionMedio === "verbal" ? "De palabra, ante el encuestador" : "Sin dato"} />
+            <Dato l="Fecha" v={v.autorizacionFecha && v.autorizacionFecha.toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "medium", timeStyle: "short" })} />
+            <Dato l="Versión de la política" v={v.autorizacionVersion} />
+            {urlFirma && (
+              <div className="col-span-2">
+                <a href={urlFirma} target="_blank" rel="noreferrer" className="font-semibold text-marca-700 underline">Ver firma (enlace privado, vence en 1 hora)</a>
+              </div>
+            )}
+          </dl>
+        ) : (
+          <p className="text-stone-700">{personas.length ? "Esta familia no ha autorizado el tratamiento de sus datos." : "No hay datos personales registrados."}</p>
+        )}
+        {puede(u, "censo", "eliminar") && !v.datosSuprimidosEn && personas.length > 0 && (
+          <div className="mt-4 border-t border-stone-200 pt-3">
+            <p className="mb-2 text-sm text-stone-600">
+              Si la familia pide que se borren sus datos o retira su autorización, use esta opción. La casa y su relación con el acueducto se conservan.
+            </p>
+            <SuprimirDatos id={v.id} />
+          </div>
+        )}
+      </section>
+
+      {fotos.length > 0 && (
         <section className="tarjeta" aria-labelledby="fotos">
           <h2 id="fotos" className="mb-3 text-lg font-bold">Fotos</h2>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {adjuntos.map((a) => (
+            {fotos.map((a) => (
               <a key={a.id} href={a.url} target="_blank" rel="noreferrer">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={miniatura(a.url)!} alt={a.descripcion ?? "Foto de la vivienda"} className="aspect-[4/3] w-full rounded-lg object-cover" />

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { fechaCorta, hoyBogota, pesos } from "@/lib/dinero";
 import { cuentasConSaldo } from "@/lib/finanzas";
 import { requerirPermiso } from "@/lib/session";
-import { CuentaForm } from "./cuenta-form";
+import { CuentaForm, EditarCuentaForm } from "./cuenta-form";
 
 export const metadata = { title: "Cuentas" };
 
@@ -25,7 +25,12 @@ export default async function Cuentas() {
           </div>
           <p className="text-stone-600">
             Saldo inicial <span className="num">{pesos(c.saldoInicial)}</span> al <span className="num">{fechaCorta(c.fechaSaldoInicial)}</span>
+            {!c.activa && <span className="font-semibold text-ocre-800"> · Inactiva</span>}
           </p>
+          <details className="mt-3">
+            <summary className="cursor-pointer font-semibold text-marca-700">Corregir datos</summary>
+            <EditarCuentaForm c={{ id: c.id, nombre: c.nombre, entidad: c.entidad, ultimosDigitos: c.ultimosDigitos, activa: c.activa, saldoInicial: c.saldoInicial }} />
+          </details>
         </div>
       ))}
       <section className="tarjeta" aria-labelledby="nueva">

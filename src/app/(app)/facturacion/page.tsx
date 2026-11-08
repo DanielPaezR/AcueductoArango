@@ -6,7 +6,7 @@ import { fechaCorta, hoyBogota, nombreMes, pesos } from "@/lib/dinero";
 import { resumenCartera, tarifaVigente } from "@/lib/finanzas";
 import { puede } from "@/lib/permisos";
 import { requerirPermiso } from "@/lib/session";
-import { PeriodoForm, TarifaForm } from "./forms";
+import { EliminarTarifa, PeriodoForm, TarifaForm } from "./forms";
 
 export const metadata = { title: "Cobros del mes" };
 
@@ -130,12 +130,13 @@ export default async function Facturacion() {
             "No hay tarifa registrada."
           )}
         </p>
-        {tarifas.length > 1 && (
+        {tarifas.length > 0 && (
           <ul className="mb-4 space-y-1 text-stone-700">
-            {tarifas.slice(1).map((t) => (
-              <li key={t.id} className="num">
-                {pesos(t.valorMensual)} desde {fechaCorta(t.vigenteDesde)}
+            {tarifas.map((t) => (
+              <li key={t.id}>
+                <span className="num">{pesos(t.valorMensual)}</span> desde <span className="num">{fechaCorta(t.vigenteDesde)}</span>
                 {t.actaAprobacion && ` · ${t.actaAprobacion}`}
+                {puede(u, "facturacion", "editar") && !periodos.some((p) => p.valorMes === t.valorMensual) && <EliminarTarifa id={t.id} />}
               </li>
             ))}
           </ul>

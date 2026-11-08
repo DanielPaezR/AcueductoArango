@@ -20,6 +20,7 @@ export type PuntoVivienda = {
   jefe: string | null;
   personas: number;
   referencia: string | null;
+  proyectos: string[];
 };
 
 /** Colores para sectores sin color propio: pinturas de puertas y balcones. */
@@ -68,10 +69,13 @@ function MiUbicacion() {
 export default function MapaUsuarios({
   puntos,
   sectores,
+  proyectos = [],
 }: {
   puntos: PuntoVivienda[];
   sectores: { id: number; nombre: string; color: string | null }[];
+  proyectos?: { id: string; nombre: string }[];
 }) {
+  const [ayuda, setAyuda] = useState("");
   const [sector, setSector] = useState("");
   const [acueducto, setAcueducto] = useState("");
   const [colorPor, setColorPor] = useState<"acueducto" | "sector">("acueducto");
@@ -86,6 +90,7 @@ export default function MapaUsuarios({
     (p) =>
       (!sector || String(p.sectorId) === sector) &&
       (!acueducto || String(p.usaAcueducto) === acueducto) &&
+      (!ayuda || (ayuda === "ninguna" ? !p.proyectos.length : p.proyectos.includes(ayuda))) &&
       (!q ||
         p.codigo?.toLowerCase().includes(q.toLowerCase()) ||
         p.jefe?.toLowerCase().includes(q.toLowerCase())),
@@ -126,6 +131,15 @@ export default function MapaUsuarios({
             <option value="true">Con acueducto</option>
             <option value="false">Sin acueducto</option>
           </select>
+          {proyectos.length > 0 && (
+            <select className="input min-h-10 w-auto shrink-0 py-1.5 text-[0.95rem]" aria-label="Ayuda recibida" value={ayuda} onChange={(e) => setAyuda(e.target.value)}>
+              <option value="">Cualquier ayuda</option>
+              <option value="ninguna">No han recibido ayudas</option>
+              {proyectos.map((pr) => (
+                <option key={pr.id} value={pr.id}>Recibió: {pr.nombre}</option>
+              ))}
+            </select>
+          )}
           <select className="input min-h-10 w-auto shrink-0 py-1.5 text-[0.95rem]" aria-label="Colorear por" value={colorPor} onChange={(e) => setColorPor(e.target.value as "acueducto" | "sector")}>
             <option value="acueducto">Colores: acueducto</option>
             <option value="sector">Colores: sector</option>

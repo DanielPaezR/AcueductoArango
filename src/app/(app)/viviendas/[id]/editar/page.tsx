@@ -53,6 +53,8 @@ export default async function EditarVivienda({ params }: PageProps<"/viviendas/[
             titularMatriculaTelefono: v.titularMatriculaTelefono,
             autorizacionDatos: v.autorizacionDatos,
             autorizacionNombre: v.autorizacionNombre,
+            autorizacionDocumento: v.autorizacionDocumento,
+            autorizacionMedio: v.autorizacionMedio as "firma" | "verbal" | null,
             estado: v.estado as "habitada",
             observaciones: v.observaciones,
           },

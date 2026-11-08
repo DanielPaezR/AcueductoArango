@@ -3,6 +3,7 @@ import { db, schema } from "@/db";
 import { usuarioApi } from "@/lib/api";
 import { auditar } from "@/lib/auditoria";
 import { puede } from "@/lib/permisos";
+import { VERSION_POLITICA } from "@/lib/legal";
 import { syncViviendaSchema } from "@/lib/validacion";
 
 /**
@@ -41,7 +42,9 @@ export async function POST(req: Request) {
   const ahora = new Date();
   const datos = {
     ...v,
-    autorizacionFecha: v.autorizacionDatos ? (existente?.autorizacionFecha ?? ahora) : null,
+    autorizacionFecha: v.autorizacionDatos ? (existente?.autorizacionDatos ? existente.autorizacionFecha : ahora) : null,
+    // La versión de la política queda fijada al momento de autorizar
+    autorizacionVersion: v.autorizacionDatos ? (existente?.autorizacionDatos ? (existente.autorizacionVersion ?? VERSION_POLITICA) : VERSION_POLITICA) : null,
     updatedBy: usuario.id,
     updatedAt: ahora,
   };

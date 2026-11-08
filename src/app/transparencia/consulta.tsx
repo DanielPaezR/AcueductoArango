@@ -11,6 +11,10 @@ export function ConsultaEstado() {
     <section className="tarjeta" aria-labelledby="consulta">
       <h2 id="consulta" className="text-lg font-bold">Consulte su estado de cuenta</h2>
       <p className="mt-1 text-stone-700">Escriba la cédula del titular de la matrícula o de la cabeza de familia.</p>
+      <p className="mt-1 text-sm text-stone-600">
+        Consulte solo su propia cuenta. Las consultas están limitadas y quedan registradas (sin guardar la cédula).{" "}
+        <a href="/privacidad" className="font-semibold text-marca-700 underline">Política de datos</a>
+      </p>
       <form action={accion} className="mt-4 flex flex-col gap-2 sm:flex-row">
         <label htmlFor="cedula" className="sr-only">Número de cédula</label>
         <input

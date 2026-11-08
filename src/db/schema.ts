@@ -73,6 +73,9 @@ export const usuarios = pgTable("usuarios", {
   permisos: jsonb("permisos").$type<Record<string, string[]>>().notNull().default({}),
   activo: boolean("activo").notNull().default(true),
   debeCambiarPassword: boolean("debe_cambiar_password").notNull().default(true),
+  /** Versión de los términos de uso y compromiso de confidencialidad aceptados. */
+  terminosVersion: varchar("terminos_version", { length: 20 }),
+  terminosAceptadosEn: timestamp("terminos_aceptados_en", { withTimezone: true }),
   /** Para el futuro portal del suscriptor */
   suscriptorId: uuid("suscriptor_id"),
   ultimoAcceso: timestamp("ultimo_acceso", { withTimezone: true }),
@@ -138,6 +141,11 @@ export const viviendas = pgTable(
     autorizacionDatos: boolean("autorizacion_datos").notNull().default(false),
     autorizacionFecha: timestamp("autorizacion_fecha", { withTimezone: true }),
     autorizacionNombre: varchar("autorizacion_nombre", { length: 120 }),
+    autorizacionDocumento: varchar("autorizacion_documento", { length: 30 }),
+    autorizacionMedio: varchar("autorizacion_medio", { length: 10 }), // firma, verbal
+    autorizacionVersion: varchar("autorizacion_version", { length: 20 }), // versión de la política aceptada
+    /** Fecha en que se suprimieron los datos personales a petición del titular. */
+    datosSuprimidosEn: timestamp("datos_suprimidos_en", { withTimezone: true }),
 
     estado: varchar("estado", { length: 20 }).notNull().default("habitada"), // habitada, deshabitada, en_construccion, demolida
     observaciones: text("observaciones"),
@@ -495,7 +503,9 @@ export const adjuntos = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     entidad: varchar("entidad", { length: 30 }).notNull(), // vivienda, persona, elemento, tramo, mantenimiento, compra, pago, participacion, proyecto
     entidadId: uuid("entidad_id").notNull(),
-    tipo: varchar("tipo", { length: 20 }).notNull().default("foto"), // foto, factura, documento, antes, despues
+    tipo: varchar("tipo", { length: 20 }).notNull().default("foto"), // foto, factura, documento, antes, despues, soporte, firma
+    /** Archivo privado en Cloudinary (solo se ve con URL firmada; p. ej. firmas de autorización). */
+    privado: boolean("privado").notNull().default(false),
     url: text("url").notNull(),
     publicId: text("public_id").notNull(),
     descripcion: text("descripcion"),

@@ -231,3 +231,13 @@ export async function anularPago(id: string, motivo: string) {
   if (pago) await auditar(u.id, "anular", "pago", id, { motivo });
   refrescar(pago?.suscriptorId);
 }
+
+/** Elimina una tarifa mal registrada, solo si ningún mes de cobro la usa. */
+export async function eliminarTarifa(id: number) {
+  const u = await requerirPermiso("facturacion", "editar");
+  const usada = await db.query.periodos.findFirst({ where: eq(PE.tarifaId, id) });
+  if (usada) throw new Error("Esta tarifa ya se usó para cobrar; no se puede eliminar. Registre una nueva.");
+  await db.delete(T).where(eq(T.id, id));
+  await auditar(u.id, "eliminar", "tarifa", String(id));
+  refrescar();
+}

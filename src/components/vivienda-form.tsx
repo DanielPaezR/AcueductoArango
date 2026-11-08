@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Campo, Opciones, Seccion, Select, SiNo, useGps } from "@/components/campos";
+import { Firma } from "@/components/firma";
+import { avisoVisita } from "@/lib/legal";
 import { MapaSelector } from "@/components/mapa/dinamicos";
 import { dbLocal } from "@/lib/offline/db";
 import { comprimirImagen, sincronizar } from "@/lib/offline/sync";
@@ -88,11 +90,13 @@ export function ViviendaForm({
     (inicial?.personas ?? []).filter((p) => p.id !== jefe.id).map((p) => unirNombre({ ...p, esJefeHogar: false })),
   );
   const [fotos, setFotos] = useState<{ id: string; blob: Blob; url: string }[]>([]);
+  const [firma, setFirma] = useState<Blob | null>(null);
   const [verMapa, setVerMapa] = useState(editando);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string>();
   const [guardadaLocal, setGuardadaLocal] = useState(false);
   const gps = useGps();
+  const [cercanas, setCercanas] = useState<{ id: string; codigo: string | null; jefe: string | null; distancia: number }[]>([]);
 
   const set = <K extends keyof Vivienda>(k: K, val: Vivienda[K]) => setV((x) => ({ ...x, [k]: val }));
   const setJ = <K extends keyof PersonaInput>(k: K, val: PersonaInput[K]) => setJefe((x) => ({ ...x, [k]: val }));
@@ -111,6 +115,21 @@ export function ViviendaForm({
         ubicacionAjustada: false,
       })),
     );
+
+  // Avisar si ya hay una casa registrada muy cerca (posible duplicado). Solo con señal.
+  const latRed = v.lat !== null ? v.lat.toFixed(4) : null;
+  const lngRed = v.lng !== null ? v.lng.toFixed(4) : null;
+  useEffect(() => {
+    if (!latRed || !lngRed || !navigator.onLine) return;
+    const ctrl = new AbortController();
+    fetch(`/api/viviendas/cercanas?lat=${v.lat}&lng=${v.lng}&excluir=${v.id}`, { signal: ctrl.signal })
+      .then((r) => (r.ok ? r.json() : { cercanas: [] }))
+      .then((d) => setCercanas(d.cercanas ?? []))
+      .catch(() => {});
+    return () => ctrl.abort();
+    // Se consulta al cambiar la ubicación (redondeada a ~10 m)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [latRed, lngRed]);
 
   // Al crear, arrancar el GPS de una vez
   useEffect(() => {
@@ -135,6 +154,7 @@ export function ViviendaForm({
     setMiembros([]);
     fotos.forEach((f) => URL.revokeObjectURL(f.url));
     setFotos([]);
+    setFirma(null);
     setGuardadaLocal(false);
     setError(undefined);
     window.scrollTo({ top: 0 });
@@ -151,6 +171,9 @@ export function ViviendaForm({
       return setError("Para registrar datos de las personas se necesita la autorización de tratamiento de datos.");
     if (v.autorizacionDatos && !v.autorizacionNombre?.trim())
       return setError("Escriba el nombre de quien autoriza el tratamiento de datos.");
+    if (v.autorizacionDatos && !v.autorizacionMedio) return setError("Indique si la autorización fue con firma o de palabra.");
+    if (v.autorizacionDatos && v.autorizacionMedio === "firma" && !firma && !editando)
+      return setError("Falta la firma de quien autoriza (o marque que autorizó de palabra).");
 
     // Limpiar respuestas que no aplican
     const vivienda = {
@@ -183,6 +206,16 @@ export function ViviendaForm({
             entidadId: v.id,
             tipo: "foto",
             blob: f.blob,
+            guardadoEn: Date.now(),
+            intentos: 0,
+          });
+        if (firma && v.autorizacionDatos && v.autorizacionMedio === "firma")
+          await dbLocal.fotos.put({
+            id: crypto.randomUUID(),
+            entidad: "vivienda",
+            entidadId: v.id,
+            tipo: "firma",
+            blob: firma,
             guardadoEn: Date.now(),
             intentos: 0,
           });
@@ -260,6 +293,22 @@ export function ViviendaForm({
           <p className="text-sm text-stone-600" role="status">Mejorando la precisión… espere unos segundos para un punto más exacto.</p>
         )}
         {gps.error && <p className="text-teja-700" role="alert">{gps.error}</p>}
+        {cercanas.length > 0 && (
+          <div className="rounded-lg bg-ocre-50 p-3 ring-1 ring-ocre-100" role="alert">
+            <p className="font-semibold text-ocre-800">¿Esta casa ya está registrada? Hay registros muy cerca:</p>
+            <ul className="mt-1 space-y-0.5 text-stone-800">
+              {cercanas.map((c) => (
+                <li key={c.id}>
+                  <a href={`/viviendas/${c.id}`} target="_blank" rel="noreferrer" className="font-semibold underline">
+                    {c.codigo} · {c.jefe ?? "Sin familia"}
+                  </a>{" "}
+                  a <span className="num">{c.distancia}</span> m
+                </li>
+              ))}
+            </ul>
+            <p className="mt-1 text-sm text-stone-700">Si es la misma casa, no la registre de nuevo: ábrala y edítela.</p>
+          </div>
+        )}
         {verMapa && (
           <>
             <MapaSelector
@@ -444,24 +493,53 @@ export function ViviendaForm({
 
       {/* Autorización */}
       <Seccion titulo="Autorización de datos personales" icono={Signature}>
-        <p className="text-sm text-stone-600">
-          Lea a la familia: “La Junta de Acción Comunal recoge estos datos solo para la gestión comunitaria y del acueducto
-          de la vereda. No se compartirán con terceros sin su permiso. Puede pedir consultarlos, corregirlos o eliminarlos en
-          cualquier momento (Ley 1581 de 2012).”
-        </p>
+        <div className="space-y-2 rounded-lg bg-stone-50 p-3 text-[0.95rem] text-stone-800 ring-1 ring-stone-200">
+          <p className="font-semibold">Lea esto a la familia antes de preguntar sus datos:</p>
+          {avisoVisita().map((t) => (
+            <p key={t}>{t}</p>
+          ))}
+        </div>
         <label className="flex items-center gap-3">
-          <input type="checkbox" className="h-6 w-6 accent-marca-700" checked={v.autorizacionDatos} onChange={(e) => set("autorizacionDatos", e.target.checked)} />
-          <span className="font-medium">La familia autoriza el tratamiento de sus datos</span>
+          <input type="checkbox" className="size-6 accent-marca-700" checked={v.autorizacionDatos} onChange={(e) => set("autorizacionDatos", e.target.checked)} />
+          <span className="font-medium">La familia escuchó el aviso y autoriza el tratamiento de sus datos</span>
         </label>
         {v.autorizacionDatos && (
-          <Campo label="Nombre de quien autoriza">
-            <input className="input" value={v.autorizacionNombre ?? ""} onChange={(e) => set("autorizacionNombre", e.target.value)} />
-            {jefe.nombres.trim() && !v.autorizacionNombre && (
-              <button type="button" className="mt-1 text-sm font-semibold text-marca-700" onClick={() => set("autorizacionNombre", jefe.nombres.trim())}>
-                Usar “{jefe.nombres.trim()}”
-              </button>
+          <>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Campo label="Nombre de quien autoriza">
+                <input className="input" value={v.autorizacionNombre ?? ""} onChange={(e) => set("autorizacionNombre", e.target.value)} />
+                {jefe.nombres.trim() && !v.autorizacionNombre && (
+                  <button
+                    type="button"
+                    className="mt-1 text-sm font-semibold text-marca-700"
+                    onClick={() => setV((x) => ({ ...x, autorizacionNombre: jefe.nombres.trim(), autorizacionDocumento: x.autorizacionDocumento || jefe.numeroDocumento || null }))}
+                  >
+                    Usar “{jefe.nombres.trim()}”
+                  </button>
+                )}
+              </Campo>
+              <Campo label="Cédula de quien autoriza">
+                <input className="input num" inputMode="numeric" value={v.autorizacionDocumento ?? ""} onChange={(e) => set("autorizacionDocumento", e.target.value)} />
+              </Campo>
+            </div>
+            <Campo label="¿Cómo autorizó?">
+              <Opciones
+                value={v.autorizacionMedio === "verbal" ? "De palabra" : v.autorizacionMedio === "firma" ? "Con firma" : null}
+                onChange={(x) => set("autorizacionMedio", x === "Con firma" ? "firma" : x === "De palabra" ? "verbal" : null)}
+                opciones={["Con firma", "De palabra"]}
+              />
+            </Campo>
+            {v.autorizacionMedio === "firma" && (
+              <Campo label="Firma de quien autoriza">
+                <Firma onCambio={setFirma} />
+              </Campo>
             )}
-          </Campo>
+            {v.autorizacionMedio === "verbal" && (
+              <p className="text-sm text-stone-700">
+                Queda registrado que usted, como encuestador, leyó el aviso y recibió la autorización de palabra, con fecha y hora.
+              </p>
+            )}
+          </>
         )}
         <Campo label="Observaciones (opcional)">
           <textarea className="input" rows={2} value={v.observaciones ?? ""} onChange={(e) => set("observaciones", e.target.value)} />

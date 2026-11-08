@@ -93,6 +93,20 @@ export default async function Reportes() {
         </table>
       </section>
 
+      {u.rol === "superadmin" && (
+        <section className="tarjeta zocalo zocalo-pendiente" aria-labelledby="respaldo">
+          <h2 id="respaldo" className="text-lg font-bold">Respaldo completo</h2>
+          <p className="mt-1 mb-3 pb-1 text-stone-700">
+            Todas las tablas del sistema en un solo Excel. Descárguelo cada semana y guárdelo en un lugar seguro (no en grupos de WhatsApp):
+            tiene datos personales.
+          </p>
+          <a href="/api/respaldo" className="btn-secundario mb-2" download>
+            <FileSpreadsheet className="size-5" aria-hidden />
+            Descargar respaldo
+          </a>
+        </section>
+      )}
+
       <section aria-labelledby="descargas">
         <h2 id="descargas" className="mb-1 text-lg font-bold">Descargar en Excel</h2>
         <p className="mb-3 text-stone-700">Contienen datos personales: compártalos solo con la Junta.</p>

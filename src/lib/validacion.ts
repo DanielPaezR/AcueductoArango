@@ -75,6 +75,8 @@ export const viviendaSchema = z.object({
   titularMatriculaTelefono: txt(30),
   autorizacionDatos: z.boolean().default(false),
   autorizacionNombre: txt(120),
+  autorizacionDocumento: txt(30),
+  autorizacionMedio: z.enum(["firma", "verbal"]).nullish().transform((v) => v ?? null),
   estado: z.enum(["habitada", "deshabitada", "en_construccion", "demolida"]).default("habitada"),
   observaciones: txt(2000),
 });

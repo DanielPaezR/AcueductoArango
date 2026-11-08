@@ -2,6 +2,7 @@
 
 import {
   ClipboardList,
+  History,
   Droplets,
   Globe,
   HandHeart,
@@ -30,4 +31,5 @@ export const ICONOS: Record<NombreIcono, LucideIcon> = {
   transparencia: Globe,
   reportes: ChartColumn,
   usuarios: ShieldUser,
+  bitacora: History,
 };

@@ -5,23 +5,14 @@ import { headers } from "next/headers";
 import { db } from "@/db";
 import { auditar } from "@/lib/auditoria";
 import { estadoSuscriptores } from "@/lib/finanzas";
+import { crearLimite } from "@/lib/limite";
 
 
-/* Límite simple en memoria: 8 consultas por conexión cada 10 minutos (una sola instancia en Railway). */
-const VENTANA_MS = 10 * 60 * 1000;
-const MAXIMO = 8;
-const intentos = new Map<string, number[]>();
-
+/* 8 consultas por conexión cada 10 minutos. */
+const limite = crearLimite(8, 10 * 60 * 1000);
 function permitido(ip: string) {
-  const ahora = Date.now();
-  const lista = (intentos.get(ip) ?? []).filter((t) => ahora - t < VENTANA_MS);
-  if (lista.length >= MAXIMO) {
-    intentos.set(ip, lista);
-    return false;
-  }
-  lista.push(ahora);
-  intentos.set(ip, lista);
-  if (intentos.size > 5000) intentos.clear();
+  if (limite.bloqueado(ip)) return false;
+  limite.registrar(ip);
   return true;
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
-import { crearTarifa, generarPeriodo } from "@/actions/cobros";
+import { useActionState, useState, useTransition } from "react";
+import { crearTarifa, eliminarTarifa, generarPeriodo } from "@/actions/cobros";
 
 const Msg = ({ e }: { e?: { error?: string; ok?: string } }) =>
   e?.error ? (
@@ -54,5 +54,31 @@ export function TarifaForm({ hoy }: { hoy: string }) {
       <Msg e={estado} />
       <button className="btn-secundario w-full" disabled={pendiente}>Guardar tarifa</button>
     </form>
+  );
+}
+
+export function EliminarTarifa({ id }: { id: number }) {
+  const [pendiente, start] = useTransition();
+  const [error, setError] = useState<string>();
+  return (
+    <>
+      <button
+        className="ml-2 text-sm font-semibold text-teja-700 underline"
+        disabled={pendiente}
+        onClick={() =>
+          confirm("¿Eliminar esta tarifa mal registrada?") &&
+          start(async () => {
+            try {
+              await eliminarTarifa(id);
+            } catch (e) {
+              setError((e as Error).message);
+            }
+          })
+        }
+      >
+        Eliminar
+      </button>
+      {error && <span className="block text-sm text-teja-700">{error}</span>}
+    </>
   );
 }

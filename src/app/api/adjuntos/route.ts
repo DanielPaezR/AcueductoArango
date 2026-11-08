@@ -49,7 +49,8 @@ export async function POST(req: Request) {
   if (!cloudinaryConfigurado())
     return Response.json({ error: "Cloudinary no está configurado en el servidor" }, { status: 503 });
 
-  const subida = await subirArchivo(Buffer.from(await archivo.arrayBuffer()), `vereda/${entidad}/${entidadId}`, id);
+  const privado = tipo === "firma";
+  const subida = await subirArchivo(Buffer.from(await archivo.arrayBuffer()), `vereda/${entidad}/${entidadId}`, id, privado);
 
   await db.insert(schema.adjuntos).values({
     id,
@@ -59,6 +60,7 @@ export async function POST(req: Request) {
     url: subida.secure_url,
     publicId: subida.public_id,
     descripcion,
+    privado,
     createdBy: u.id,
   });
 
@@ -69,5 +71,5 @@ export async function POST(req: Request) {
       .where(and(eq(schema.viviendas.id, entidadId), isNull(schema.viviendas.fotoPrincipalUrl)));
   }
   await auditar(u.id, "adjuntar", entidad, entidadId, { adjunto: id, tipo });
-  return Response.json({ ok: true, url: subida.secure_url });
+  return Response.json({ ok: true, url: privado ? null : subida.secure_url });
 }

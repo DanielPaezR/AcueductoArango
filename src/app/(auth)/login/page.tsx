@@ -25,6 +25,11 @@ export default async function LoginPage() {
         <p className="mt-6 text-sm text-stone-600">
           ¿No tiene usuario o olvidó su contraseña? Pídale ayuda a la presidencia de la Junta.
         </p>
+        <p className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-sm font-semibold">
+          <a href="/transparencia" className="text-marca-700 underline">Cuentas claras del acueducto</a>
+          <a href="/privacidad" className="text-marca-700 underline">Datos personales</a>
+          <a href="/terminos" className="text-marca-700 underline">Términos de uso</a>
+        </p>
       </div>
     </main>
   );

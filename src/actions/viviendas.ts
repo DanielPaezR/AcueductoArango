@@ -50,3 +50,63 @@ export async function guardarSector(_: Estado, form: FormData): Promise<Estado> 
   revalidatePath("/viviendas/sectores");
   return { ok: "Sector guardado" };
 }
+
+/**
+ * Derecho de supresión / revocatoria (Ley 1581, art. 8 y 15): borra los datos personales de la familia.
+ * Se conserva la casa (ubicación) y su relación con el acueducto, que la Junta necesita para el servicio
+ * y la contabilidad; el registro de que se suprimieron queda en la bitácora.
+ */
+export async function suprimirDatosPersonales(id: string, motivo: string) {
+  const u = await requerirPermiso("censo", "eliminar");
+  if (motivo.trim().length < 5) throw new Error("Escriba cómo y cuándo lo pidió el titular");
+  const ahora = new Date();
+  await db.transaction(async (tx) => {
+    await tx
+      .update(schema.personas)
+      .set({
+        nombres: "Datos suprimidos",
+        apellidos: null,
+        tipoDocumento: null,
+        numeroDocumento: null,
+        fechaNacimiento: null,
+        edadReportada: null,
+        edadReportadaEn: null,
+        telefono: null,
+        escolaridad: null,
+        ocupacion: null,
+        regimenSalud: null,
+        eps: null,
+        sisbenGrupo: null,
+        tipoDiscapacidad: null,
+        grupoEtnico: null,
+        victimaConflicto: null,
+        observaciones: null,
+        deletedAt: ahora,
+        updatedAt: ahora,
+      })
+      .where(eq(schema.personas.viviendaId, id));
+    await tx
+      .update(schema.viviendas)
+      .set({
+        autorizacionDatos: false,
+        autorizacionNombre: null,
+        autorizacionDocumento: null,
+        titularMatriculaDocumento: null,
+        titularMatriculaTelefono: null,
+        actividadEconomica: null,
+        observaciones: null,
+        datosSuprimidosEn: ahora,
+        updatedBy: u.id,
+        updatedAt: ahora,
+      })
+      .where(eq(schema.viviendas.id, id));
+    // Fotos y firma dejan de mostrarse
+    await tx
+      .update(schema.adjuntos)
+      .set({ deletedAt: ahora })
+      .where(and(eq(schema.adjuntos.entidad, "vivienda"), eq(schema.adjuntos.entidadId, id), isNull(schema.adjuntos.deletedAt)));
+  });
+  await auditar(u.id, "suprimir_datos", "vivienda", id, { motivo: motivo.trim() });
+  revalidatePath(`/viviendas/${id}`);
+  revalidatePath("/viviendas");
+}

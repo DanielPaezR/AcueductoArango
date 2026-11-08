@@ -43,6 +43,13 @@
       "when": 1794153626195,
       "tag": "0005_compra_movimiento",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794156410287,
+      "tag": "0006_legal",
+      "breakpoints": true
     }
   ]
 }

@@ -74,7 +74,7 @@ async function ejecutar(): Promise<ResultadoSync> {
       fd.set("entidad", f.entidad);
       fd.set("entidadId", f.entidadId);
       fd.set("tipo", f.tipo);
-      fd.set("archivo", f.blob, `${f.id}.jpg`);
+      fd.set("archivo", f.blob, `${f.id}.${f.tipo === "firma" ? "png" : "jpg"}`);
       const res = await fetch("/api/adjuntos", { method: "POST", body: fd });
       const body = await res.json().catch(() => ({}));
       if (res.status === 401) return { ...r, sesionVencida: true, ultimoError: body.error };

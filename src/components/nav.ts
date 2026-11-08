@@ -12,7 +12,8 @@ export type NombreIcono =
   | "tesoreria"
   | "transparencia"
   | "reportes"
-  | "usuarios";
+  | "usuarios"
+  | "bitacora";
 
 export type ItemNav = { href: string; label: string; icono: NombreIcono; seccion?: Seccion; fase?: number };
 
@@ -30,6 +31,7 @@ export const NAV: ItemNav[] = [
   { href: "/transparencia", label: "Página pública", icono: "transparencia" },
   { href: "/reportes", label: "Reportes", icono: "reportes", seccion: "reportes" },
   { href: "/usuarios", label: "Usuarios", icono: "usuarios", seccion: "usuarios" },
+  { href: "/bitacora", label: "Bitácora", icono: "bitacora", seccion: "usuarios" },
 ];
 
 /** Fase hasta la que ya hay pantallas construidas. */

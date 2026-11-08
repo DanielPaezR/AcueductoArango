@@ -112,3 +112,39 @@ export async function anularMovimiento(id: string, motivo: string) {
   await auditar(u.id, "anular", "movimiento", id, { motivo });
   refrescar();
 }
+
+const editarCuentaSchema = z.object({
+  id: z.coerce.number().int().positive(),
+  nombre: z.string().trim().min(3, "Escriba el nombre").max(80),
+  entidad: z.string().trim().max(60).optional(),
+  ultimosDigitos: z.string().trim().regex(/^\d{0,6}$/, "Solo los últimos dígitos").optional(),
+  activa: z.enum(["si", "no"]),
+});
+
+/** Corrige los datos de una cuenta. El saldo inicial no se toca aquí (afectaría lo publicado). */
+export async function editarCuenta(_: Estado, form: FormData): Promise<Estado> {
+  const u = await requerirPermiso("tesoreria", "aprobar");
+  const p = editarCuentaSchema.safeParse(Object.fromEntries(form));
+  if (!p.success) return { error: p.error.issues[0].message };
+  const datos = { nombre: p.data.nombre, entidad: p.data.entidad || null, ultimosDigitos: p.data.ultimosDigitos || null, activa: p.data.activa === "si" };
+  await db.update(C).set(datos).where(eq(C.id, p.data.id));
+  await auditar(u.id, "editar", "cuenta", String(p.data.id), datos);
+  refrescar();
+  return { ok: "Cuenta actualizada" };
+}
+
+/** Corrige el saldo inicial dejando el motivo en la bitácora (queda trazable). */
+export async function corregirSaldoInicial(_: Estado, form: FormData): Promise<Estado> {
+  const u = await requerirPermiso("tesoreria", "aprobar");
+  const id = Number(form.get("id"));
+  const saldo = leerPesos(form.get("saldoInicial"));
+  const motivo = String(form.get("motivo") ?? "").trim();
+  if (!Number.isFinite(saldo)) return { error: "Escriba el saldo" };
+  if (motivo.length < 5) return { error: "Explique por qué se corrige el saldo" };
+  const antes = await db.query.cuentas.findFirst({ where: eq(C.id, id) });
+  if (!antes) return { error: "La cuenta no existe" };
+  await db.update(C).set({ saldoInicial: String(saldo) }).where(eq(C.id, id));
+  await auditar(u.id, "editar", "cuenta", String(id), { saldoInicialAntes: antes.saldoInicial, saldoInicial: saldo, motivo });
+  refrescar();
+  return { ok: "Saldo inicial corregido (queda registrado en la bitácora)" };
+}

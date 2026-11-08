@@ -165,3 +165,27 @@ h3 {
 .leaflet-popup-content-wrapper {
   border-radius: var(--radius-lg);
 }
+
+/* Páginas legales */
+.legal h2 {
+  margin-top: 2rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-stone-900);
+}
+.legal ul,
+.legal ol {
+  padding-left: 1.25rem;
+}
+.legal ul {
+  list-style: disc;
+}
+.legal ol {
+  list-style: decimal;
+}
+.legal li + li {
+  margin-top: 0.35rem;
+}
+.legal strong {
+  color: var(--color-stone-900);
+}

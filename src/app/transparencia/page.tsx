@@ -166,6 +166,10 @@ export default async function Transparencia({ searchParams }: PageProps<"/transp
 
         <footer className="border-t border-stone-200 pt-5 text-stone-600">
           Publicado por la Junta de Acción Comunal de la vereda Arango. ¿Dudas sobre algún movimiento? Pregunte en la próxima asamblea o a la presidencia de la Junta.
+          <span className="mt-3 flex flex-wrap gap-x-4 gap-y-1 font-semibold">
+            <Link href="/privacidad" className="text-marca-700 underline">Política de datos personales</Link>
+            <Link href="/terminos" className="text-marca-700 underline">Términos de uso</Link>
+          </span>
         </footer>
       </main>
     </div>

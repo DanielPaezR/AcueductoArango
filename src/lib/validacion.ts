@@ -21,6 +21,12 @@ export const personaSchema = z.object({
     .nullish()
     .or(z.literal(""))
     .transform((v) => (v ? v : null)),
+  edadReportada: z.number().int().min(0).max(120).nullish().transform((v) => v ?? null),
+  edadReportadaEn: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullish()
+    .transform((v) => v ?? null),
   sexo: txt(10),
   parentesco: txt(30),
   esJefeHogar: z.boolean().default(false),
@@ -62,6 +68,10 @@ export const viviendaSchema = z.object({
   actividadEconomica: txt(300),
   usaAcueducto: z.boolean().default(false),
   otraFuenteAgua: txt(60),
+  tieneMatricula: bool,
+  numeroMatricula: txt(30),
+  titularMatriculaNombre: txt(160),
+  titularMatriculaTelefono: txt(30),
   autorizacionDatos: z.boolean().default(false),
   autorizacionNombre: txt(120),
   estado: z.enum(["habitada", "deshabitada", "en_construccion", "demolida"]).default("habitada"),

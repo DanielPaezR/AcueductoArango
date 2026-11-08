@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { MapaSelector } from "@/components/mapa/dinamicos";
 import { dbLocal } from "@/lib/offline/db";
 import { comprimirImagen, sincronizar } from "@/lib/offline/sync";
-import { edad, OPC } from "@/lib/opciones";
+import { edadPersona, OPC } from "@/lib/opciones";
 import type { PersonaInput, ViviendaInput } from "@/lib/validacion";
 
 type Sector = { id: number; nombre: string };
@@ -17,9 +17,19 @@ const nuevaPersona = (jefe = false): PersonaInput => ({
   nombres: "",
   esJefeHogar: jefe,
   parentesco: jefe ? "Jefe(a) de hogar" : null,
+  tipoDocumento: jefe ? "CC" : null,
   discapacidad: false,
   afiliadoJac: false,
 });
+
+const hoyISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+/** Une nombres y apellidos de registros antiguos en un solo "nombre completo". */
+const unirNombre = (p: PersonaInput): PersonaInput =>
+  p.apellidos ? { ...p, nombres: `${p.nombres} ${p.apellidos}`.trim(), apellidos: null } : p;
 
 const viviendaVacia = (): Vivienda => ({
   id: crypto.randomUUID(),
@@ -148,129 +158,54 @@ function useGps() {
   return { estado, lectura, error, iniciar, detener: () => (detener(), setEstado(lectura ? "listo" : "inactivo")) };
 }
 
-/* ---------- persona ---------- */
+/* ---------- edad ---------- */
 
-function PersonaCard({
-  p,
-  i,
-  onChange,
-  onEliminar,
-}: {
-  p: PersonaInput;
-  i: number;
-  onChange: (p: PersonaInput) => void;
-  onEliminar: () => void;
-}) {
-  const [abierta, setAbierta] = useState(!p.nombres);
-  const [mas, setMas] = useState(false);
-  const set = <K extends keyof PersonaInput>(k: K, v: PersonaInput[K]) => onChange({ ...p, [k]: v });
-  const e = edad(p.fechaNacimiento ?? null);
-
-  if (!abierta)
-    return (
-      <button type="button" onClick={() => setAbierta(true)} className="flex w-full items-center gap-3 rounded-lg border border-stone-200 p-3 text-left">
-        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-marca-100 font-bold text-marca-800">{i + 1}</span>
-        <span className="flex-1">
-          <span className="block font-medium">
-            {p.nombres} {p.apellidos} {p.esJefeHogar && <span className="ml-1 rounded bg-marca-100 px-1.5 text-xs text-marca-800">Jefe(a)</span>}
-          </span>
-          <span className="text-sm text-stone-500">
-            {[p.parentesco, e !== null ? `${e} años` : null, p.numeroDocumento].filter(Boolean).join(" · ")}
-          </span>
-        </span>
-        <span className="text-stone-400">Editar</span>
-      </button>
-    );
-
+/** Campo de edad: muestra la edad actual y, si se cambia, la guarda como "edad reportada hoy". */
+function EdadInput({ p, onChange }: { p: PersonaInput; onChange: (p: PersonaInput) => void }) {
+  const actual = edadPersona(p);
   return (
-    <div className="space-y-3 rounded-lg border border-marca-600/40 bg-marca-50/40 p-3">
-      <div className="flex items-center justify-between">
-        <span className="font-semibold">Persona {i + 1}</span>
-        <button type="button" onClick={onEliminar} className="text-sm text-red-700">Quitar</button>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Campo label="Nombres *">
-          <input className="input" value={p.nombres} onChange={(e) => set("nombres", e.target.value)} autoCapitalize="words" />
-        </Campo>
-        <Campo label="Apellidos">
-          <input className="input" value={p.apellidos ?? ""} onChange={(e) => set("apellidos", e.target.value)} autoCapitalize="words" />
-        </Campo>
-        <Campo label="Tipo de documento">
-          <Select value={p.tipoDocumento} onChange={(v) => set("tipoDocumento", v)} opciones={OPC.tipoDocumento} />
-        </Campo>
-        <Campo label="Número de documento">
-          <input className="input" inputMode="numeric" value={p.numeroDocumento ?? ""} onChange={(e) => set("numeroDocumento", e.target.value)} />
-        </Campo>
-        <Campo label={`Fecha de nacimiento${e !== null ? ` (${e} años)` : ""}`}>
-          <input type="date" className="input" value={p.fechaNacimiento ?? ""} onChange={(e) => set("fechaNacimiento", e.target.value)} />
-        </Campo>
-        <Campo label="Sexo">
-          <Select value={p.sexo} onChange={(v) => set("sexo", v)} opciones={OPC.sexo} />
-        </Campo>
-        <Campo label="Parentesco con el jefe(a) de hogar">
-          <Select
-            value={p.parentesco}
-            onChange={(v) => onChange({ ...p, parentesco: v, esJefeHogar: v === "Jefe(a) de hogar" })}
-            opciones={OPC.parentesco}
-          />
-        </Campo>
-        <Campo label="Teléfono">
-          <input className="input" inputMode="tel" value={p.telefono ?? ""} onChange={(e) => set("telefono", e.target.value)} />
-        </Campo>
-      </div>
+    <input
+      type="number"
+      inputMode="numeric"
+      min={0}
+      max={120}
+      className="input"
+      value={actual ?? ""}
+      onChange={(e) =>
+        onChange({
+          ...p,
+          fechaNacimiento: null,
+          edadReportada: e.target.value === "" ? null : Number(e.target.value),
+          edadReportadaEn: e.target.value === "" ? null : hoyISO(),
+        })
+      }
+    />
+  );
+}
 
-      <button type="button" className="text-sm font-semibold text-marca-700" onClick={() => setMas(!mas)}>
-        {mas ? "▲ Menos datos" : "▼ Más datos (estudio, salud, etc.)"}
-      </button>
-      {mas && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Campo label="Escolaridad">
-            <Select value={p.escolaridad} onChange={(v) => set("escolaridad", v)} opciones={OPC.escolaridad} />
-          </Campo>
-          <Campo label="¿Estudia actualmente?">
-            <SiNo value={p.estudiaActualmente} onChange={(v) => set("estudiaActualmente", v)} />
-          </Campo>
-          <Campo label="Ocupación">
-            <input className="input" value={p.ocupacion ?? ""} onChange={(e) => set("ocupacion", e.target.value)} />
-          </Campo>
-          <Campo label="Régimen de salud">
-            <Select value={p.regimenSalud} onChange={(v) => set("regimenSalud", v)} opciones={OPC.regimenSalud} />
-          </Campo>
-          <Campo label="EPS">
-            <input className="input" value={p.eps ?? ""} onChange={(e) => set("eps", e.target.value)} />
-          </Campo>
-          <Campo label="Grupo SISBÉN (ej. B3)">
-            <input className="input uppercase" maxLength={10} value={p.sisbenGrupo ?? ""} onChange={(e) => set("sisbenGrupo", e.target.value.toUpperCase())} />
-          </Campo>
-          <Campo label="¿Tiene alguna discapacidad?">
-            <SiNo value={p.discapacidad} onChange={(v) => set("discapacidad", v ?? false)} />
-          </Campo>
-          {p.discapacidad && (
-            <Campo label="¿Cuál?">
-              <input className="input" value={p.tipoDiscapacidad ?? ""} onChange={(e) => set("tipoDiscapacidad", e.target.value)} />
-            </Campo>
-          )}
-          <Campo label="Grupo étnico">
-            <Select value={p.grupoEtnico} onChange={(v) => set("grupoEtnico", v)} opciones={OPC.grupoEtnico} />
-          </Campo>
-          <Campo label="¿Víctima del conflicto armado?">
-            <SiNo value={p.victimaConflicto} onChange={(v) => set("victimaConflicto", v)} />
-          </Campo>
-          <Campo label="¿Afiliado(a) a la JAC?">
-            <SiNo value={p.afiliadoJac} onChange={(v) => set("afiliadoJac", v ?? false)} />
-          </Campo>
-          <Campo label="Observaciones" className="sm:col-span-2">
-            <textarea className="input" rows={2} value={p.observaciones ?? ""} onChange={(e) => set("observaciones", e.target.value)} />
-          </Campo>
-        </div>
-      )}
-      <button
-        type="button"
-        className="btn-secundario w-full"
-        onClick={() => (p.nombres.trim() ? setAbierta(false) : alert("Escribe al menos los nombres"))}
-      >
-        Listo
-      </button>
+function Opciones({
+  value,
+  onChange,
+  opciones,
+}: {
+  value: string | null | undefined;
+  onChange: (v: string | null) => void;
+  opciones: readonly string[];
+}) {
+  return (
+    <div className="flex gap-1">
+      {opciones.map((o) => (
+        <button
+          type="button"
+          key={o}
+          onClick={() => onChange(value === o ? null : o)}
+          className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${
+            value === o ? "border-marca-700 bg-marca-700 text-white" : "border-stone-300 bg-white text-stone-700"
+          }`}
+        >
+          {o}
+        </button>
+      ))}
     </div>
   );
 }
@@ -287,7 +222,13 @@ export function ViviendaForm({
   const router = useRouter();
   const editando = Boolean(inicial);
   const [v, setV] = useState<Vivienda>(() => inicial?.vivienda ?? viviendaVacia());
-  const [personas, setPersonas] = useState<PersonaInput[]>(() => inicial?.personas ?? [nuevaPersona(true)]);
+  const [jefe, setJefe] = useState<PersonaInput>(() => {
+    const j = inicial?.personas.find((p) => p.esJefeHogar) ?? inicial?.personas[0];
+    return j ? unirNombre({ ...j, esJefeHogar: true }) : nuevaPersona(true);
+  });
+  const [miembros, setMiembros] = useState<PersonaInput[]>(() =>
+    (inicial?.personas ?? []).filter((p) => p.id !== jefe.id).map((p) => unirNombre({ ...p, esJefeHogar: false })),
+  );
   const [fotos, setFotos] = useState<{ id: string; blob: Blob; url: string }[]>([]);
   const [verMapa, setVerMapa] = useState(editando);
   const [guardando, setGuardando] = useState(false);
@@ -296,7 +237,10 @@ export function ViviendaForm({
   const gps = useGps();
 
   const set = <K extends keyof Vivienda>(k: K, val: Vivienda[K]) => setV((x) => ({ ...x, [k]: val }));
+  const setJ = <K extends keyof PersonaInput>(k: K, val: PersonaInput[K]) => setJefe((x) => ({ ...x, [k]: val }));
+  const setM = (id: string, np: PersonaInput) => setMiembros((xs) => xs.map((x) => (x.id === id ? np : x)));
   const pos: [number, number] | null = v.lat !== null && v.lng !== null ? [v.lat, v.lng] : null;
+  const alquilada = v.tenencia === "Alquilada";
 
   const tomarGps = () =>
     gps.iniciar((p) =>
@@ -329,7 +273,8 @@ export function ViviendaForm({
 
   const reiniciar = () => {
     setV(viviendaVacia());
-    setPersonas([nuevaPersona(true)]);
+    setJefe(nuevaPersona(true));
+    setMiembros([]);
     fotos.forEach((f) => URL.revokeObjectURL(f.url));
     setFotos([]);
     setGuardadaLocal(false);
@@ -341,23 +286,34 @@ export function ViviendaForm({
   const guardar = async () => {
     setError(undefined);
     if (!pos) return setError("Falta la ubicación: usa el GPS o marca la casa en el mapa.");
-    const conNombre = personas.filter((p) => p.nombres.trim());
-    if (conNombre.length !== personas.length) return setError("Hay personas sin nombre: complétalas o quítalas.");
-    if (conNombre.length && !v.autorizacionDatos)
+    if (miembros.some((m) => !m.nombres.trim())) return setError("Hay miembros sin nombre: complétalos o quítalos.");
+    if (!jefe.nombres.trim() && miembros.length) return setError("Escribe el nombre de la cabeza de familia.");
+    const personas = [...(jefe.nombres.trim() ? [jefe] : []), ...miembros].map((p) => ({ ...p, nombres: p.nombres.trim() }));
+    if (personas.length && !v.autorizacionDatos)
       return setError("Para registrar datos de las personas se necesita la autorización de tratamiento de datos.");
     if (v.autorizacionDatos && !v.autorizacionNombre?.trim())
       return setError("Escribe el nombre de quien autoriza el tratamiento de datos.");
 
+    // Limpiar respuestas que no aplican
+    const vivienda = {
+      ...v,
+      lat: pos[0],
+      lng: pos[1],
+      otraFuenteAgua: v.usaAcueducto ? null : v.otraFuenteAgua,
+      tieneMatricula: v.usaAcueducto ? v.tieneMatricula : null,
+      numeroMatricula: v.usaAcueducto && v.tieneMatricula ? v.numeroMatricula : null,
+      titularMatriculaNombre: v.usaAcueducto && alquilada ? v.titularMatriculaNombre : null,
+      titularMatriculaTelefono: v.usaAcueducto && alquilada ? v.titularMatriculaTelefono : null,
+    };
+
     setGuardando(true);
     gps.detener();
-    const payload = { vivienda: { ...v, lat: pos[0], lng: pos[1] }, personas };
-    const jefe = personas.find((p) => p.esJefeHogar) ?? personas[0];
     try {
       await dbLocal.transaction("rw", dbLocal.viviendas, dbLocal.fotos, async () => {
         await dbLocal.viviendas.put({
           id: v.id,
-          payload,
-          etiqueta: jefe ? `${jefe.nombres} ${jefe.apellidos ?? ""}`.trim() : v.referencia || "Vivienda sin familia",
+          payload: { vivienda, personas },
+          etiqueta: jefe.nombres.trim() || v.nombrePredio || v.referencia || "Vivienda sin familia",
           guardadoEn: Date.now(),
           intentos: 0,
         });
@@ -413,9 +369,9 @@ export function ViviendaForm({
     );
 
   return (
-    <div className="space-y-4 pb-24">
+    <div className="space-y-4 pb-28">
       {/* Ubicación */}
-      <Seccion titulo="📍 Ubicación">
+      <Seccion titulo="📍 Ubicación de la casa">
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" className="btn-primario" onClick={tomarGps} disabled={gps.estado === "buscando"}>
             {gps.estado === "buscando" ? "Buscando señal GPS…" : pos ? "Volver a tomar GPS" : "Tomar ubicación GPS"}
@@ -437,7 +393,6 @@ export function ViviendaForm({
               </span>
             )}
             {v.ubicacionAjustada && <span className="ml-2 rounded bg-sky-100 px-1.5 py-0.5 text-xs text-sky-800">Ajustada en el mapa</span>}
-            {v.altitudM != null && <span className="ml-2 text-stone-500">{v.altitudM} m s.n.m.</span>}
           </div>
         ) : (
           <p className="text-sm text-stone-500">Párate frente a la casa y toma la ubicación.</p>
@@ -461,10 +416,7 @@ export function ViviendaForm({
             </p>
           </>
         )}
-        <Campo label="Referencia para llegar">
-          <input className="input" placeholder="Ej: después de la escuela, portón verde" value={v.referencia ?? ""} onChange={(e) => set("referencia", e.target.value)} />
-        </Campo>
-        <div className="grid gap-3 sm:grid-cols-2">
+        {sectores.length > 0 && (
           <Campo label="Sector">
             <select className="input" value={v.sectorId ?? ""} onChange={(e) => set("sectorId", e.target.value ? Number(e.target.value) : null)}>
               <option value="">—</option>
@@ -473,99 +425,133 @@ export function ViviendaForm({
               ))}
             </select>
           </Campo>
-          <Campo label="Nombre del predio / finca">
-            <input className="input" value={v.nombrePredio ?? ""} onChange={(e) => set("nombrePredio", e.target.value)} />
+        )}
+      </Seccion>
+
+      {/* 1–4 Cabeza de familia */}
+      <Seccion titulo="👤 Cabeza de familia">
+        <Campo label="1. Nombre de la cabeza de familia">
+          <input className="input" autoCapitalize="words" value={jefe.nombres} onChange={(e) => setJ("nombres", e.target.value)} />
+        </Campo>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <Campo label="2. Edad">
+            <EdadInput p={jefe} onChange={setJefe} />
+          </Campo>
+          <Campo label="3. Cédula">
+            <input className="input" inputMode="numeric" value={jefe.numeroDocumento ?? ""} onChange={(e) => setJ("numeroDocumento", e.target.value)} />
+          </Campo>
+          <Campo label="4. Teléfono" className="col-span-2 sm:col-span-1">
+            <input className="input" inputMode="tel" value={jefe.telefono ?? ""} onChange={(e) => setJ("telefono", e.target.value)} />
           </Campo>
         </div>
       </Seccion>
 
-      {/* Agua */}
-      <Seccion titulo="💧 Agua">
-        <label className="flex items-center gap-3 rounded-lg border border-sky-200 bg-sky-50 p-3">
-          <input type="checkbox" className="h-6 w-6 accent-sky-600" checked={v.usaAcueducto} onChange={(e) => set("usaAcueducto", e.target.checked)} />
-          <span className="font-semibold text-sky-900">Esta vivienda usa el acueducto de la vereda</span>
-        </label>
-        {!v.usaAcueducto && (
-          <Campo label="¿De dónde toma el agua?">
+      {/* 5, 6, 8 La casa */}
+      <Seccion titulo="🏠 La casa">
+        <Campo label="5. Nombre del predio o referencia">
+          <input className="input" placeholder="Nombre de la finca o predio" value={v.nombrePredio ?? ""} onChange={(e) => set("nombrePredio", e.target.value)} />
+          <input
+            className="input mt-2"
+            placeholder="Referencia: ej. después de la escuela, portón verde"
+            value={v.referencia ?? ""}
+            onChange={(e) => set("referencia", e.target.value)}
+          />
+        </Campo>
+        <Campo label="6. ¿Alquilada o propia?">
+          <Opciones value={v.tenencia} onChange={(x) => set("tenencia", x)} opciones={OPC.tenencia} />
+        </Campo>
+        <Campo label="8. Principal sustento de la casa">
+          <input className="input" placeholder="Ej: café, ganadería, jornal, pensión…" value={v.actividadEconomica ?? ""} onChange={(e) => set("actividadEconomica", e.target.value)} />
+        </Campo>
+      </Seccion>
+
+      {/* 7 Demás miembros */}
+      <Seccion titulo={`👨‍👩‍👧 7. Demás miembros de la casa (${miembros.length})`}>
+        {miembros.map((m, i) => (
+          <div key={m.id} className="space-y-2 rounded-lg border border-stone-200 p-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-semibold text-stone-600">Miembro {i + 1}</span>
+              <button
+                type="button"
+                className="text-red-700"
+                onClick={() => (!m.nombres || confirm("¿Quitar este miembro?")) && setMiembros((xs) => xs.filter((x) => x.id !== m.id))}
+              >
+                Quitar
+              </button>
+            </div>
+            <input
+              className="input"
+              placeholder="Nombre completo"
+              autoCapitalize="words"
+              value={m.nombres}
+              onChange={(e) => setM(m.id, { ...m, nombres: e.target.value })}
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs text-stone-500">Edad</label>
+                <EdadInput p={m} onChange={(np) => setM(m.id, np)} />
+              </div>
+              <div>
+                <label className="text-xs text-stone-500">Documento (opcional)</label>
+                <input
+                  className="input"
+                  inputMode="numeric"
+                  value={m.numeroDocumento ?? ""}
+                  onChange={(e) => setM(m.id, { ...m, numeroDocumento: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+        ))}
+        <button type="button" className="btn-secundario w-full" onClick={() => setMiembros((xs) => [...xs, nuevaPersona(false)])}>
+          + Agregar miembro
+        </button>
+      </Seccion>
+
+      {/* 9–12 Acueducto */}
+      <Seccion titulo="💧 Acueducto">
+        <Campo label="9. ¿Tiene servicio de acueducto?">
+          <SiNo value={v.usaAcueducto} onChange={(x) => set("usaAcueducto", x ?? false)} />
+        </Campo>
+        {v.usaAcueducto ? (
+          <>
+            <Campo label="10. ¿Tiene matrícula del derecho del acueducto?">
+              <SiNo value={v.tieneMatricula} onChange={(x) => set("tieneMatricula", x)} />
+            </Campo>
+            {v.tieneMatricula && (
+              <Campo label="11. Número de matrícula">
+                <input className="input" value={v.numeroMatricula ?? ""} onChange={(e) => set("numeroMatricula", e.target.value)} />
+              </Campo>
+            )}
+            {alquilada && (
+              <div className="space-y-2 rounded-lg bg-amber-50 p-3">
+                <p className="text-sm font-medium text-amber-900">12. Casa alquilada: titular de la matrícula</p>
+                <input
+                  className="input"
+                  placeholder="Nombre del titular"
+                  autoCapitalize="words"
+                  value={v.titularMatriculaNombre ?? ""}
+                  onChange={(e) => set("titularMatriculaNombre", e.target.value)}
+                />
+                <input
+                  className="input"
+                  placeholder="Teléfono del titular"
+                  inputMode="tel"
+                  value={v.titularMatriculaTelefono ?? ""}
+                  onChange={(e) => set("titularMatriculaTelefono", e.target.value)}
+                />
+              </div>
+            )}
+          </>
+        ) : (
+          <Campo label="¿De dónde toma el agua? (opcional)">
             <Select value={v.otraFuenteAgua} onChange={(x) => set("otraFuenteAgua", x)} opciones={OPC.otraFuenteAgua} />
           </Campo>
         )}
       </Seccion>
 
-      {/* Familia */}
-      <Seccion titulo={`👨‍👩‍👧 Familia (${personas.length})`}>
-        <div className="space-y-2">
-          {personas.map((p, i) => (
-            <PersonaCard
-              key={p.id}
-              p={p}
-              i={i}
-              onChange={(np) => setPersonas((xs) => xs.map((x) => (x.id === np.id ? np : np.esJefeHogar ? { ...x, esJefeHogar: false } : x)))}
-              onEliminar={() => confirm("¿Quitar esta persona?") && setPersonas((xs) => xs.filter((x) => x.id !== p.id))}
-            />
-          ))}
-        </div>
-        <button type="button" className="btn-secundario w-full" onClick={() => setPersonas((xs) => [...xs, nuevaPersona(xs.length === 0)])}>
-          + Agregar persona
-        </button>
-      </Seccion>
-
-      {/* Vivienda */}
-      <Seccion titulo="🏠 La vivienda">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Campo label="Estado">
-            <select className="input" value={v.estado} onChange={(e) => set("estado", e.target.value as Vivienda["estado"])}>
-              <option value="habitada">Habitada</option>
-              <option value="deshabitada">Deshabitada</option>
-              <option value="en_construccion">En construcción</option>
-              <option value="demolida">Demolida</option>
-            </select>
-          </Campo>
-          <Campo label="Tenencia">
-            <Select value={v.tenencia} onChange={(x) => set("tenencia", x)} opciones={OPC.tenencia} />
-          </Campo>
-          <Campo label="Material de paredes">
-            <Select value={v.materialParedes} onChange={(x) => set("materialParedes", x)} opciones={OPC.materialParedes} />
-          </Campo>
-          <Campo label="Material del piso">
-            <Select value={v.materialPiso} onChange={(x) => set("materialPiso", x)} opciones={OPC.materialPiso} />
-          </Campo>
-          <Campo label="Número de cuartos">
-            <input
-              type="number"
-              min={0}
-              inputMode="numeric"
-              className="input"
-              value={v.numCuartos ?? ""}
-              onChange={(e) => set("numCuartos", e.target.value === "" ? null : Number(e.target.value))}
-            />
-          </Campo>
-          <Campo label="¿Tiene energía eléctrica?">
-            <SiNo value={v.energia} onChange={(x) => set("energia", x)} />
-          </Campo>
-          <Campo label="Cocina con">
-            <Select value={v.gas} onChange={(x) => set("gas", x)} opciones={OPC.gas} />
-          </Campo>
-          <Campo label="¿Tiene internet?">
-            <SiNo value={v.internet} onChange={(x) => set("internet", x)} />
-          </Campo>
-          <Campo label="Señal de celular">
-            <Select value={v.senalCelular} onChange={(x) => set("senalCelular", x)} opciones={OPC.senalCelular} />
-          </Campo>
-          <Campo label="Aguas residuales">
-            <Select value={v.saneamiento} onChange={(x) => set("saneamiento", x)} opciones={OPC.saneamiento} />
-          </Campo>
-          <Campo label="Manejo de basuras">
-            <Select value={v.manejoBasuras} onChange={(x) => set("manejoBasuras", x)} opciones={OPC.manejoBasuras} />
-          </Campo>
-          <Campo label="Actividad económica">
-            <input className="input" placeholder="Café, ganadería, jornal…" value={v.actividadEconomica ?? ""} onChange={(e) => set("actividadEconomica", e.target.value)} />
-          </Campo>
-        </div>
-      </Seccion>
-
       {/* Fotos */}
-      <Seccion titulo="📷 Fotos">
+      <Seccion titulo="📷 Fotos (opcional)">
         <div className="flex flex-wrap gap-2">
           {fotos.map((f) => (
             <div key={f.id} className="relative">
@@ -591,7 +577,7 @@ export function ViviendaForm({
       {/* Autorización */}
       <Seccion titulo="✍️ Autorización de datos personales">
         <p className="text-sm text-stone-600">
-          Lea al jefe(a) de hogar: “La Junta de Acción Comunal recoge estos datos solo para la gestión comunitaria y del acueducto
+          Lea a la familia: “La Junta de Acción Comunal recoge estos datos solo para la gestión comunitaria y del acueducto
           de la vereda. No se compartirán con terceros sin su permiso. Puede pedir consultarlos, corregirlos o eliminarlos en
           cualquier momento (Ley 1581 de 2012).”
         </p>
@@ -602,10 +588,15 @@ export function ViviendaForm({
         {v.autorizacionDatos && (
           <Campo label="Nombre de quien autoriza">
             <input className="input" value={v.autorizacionNombre ?? ""} onChange={(e) => set("autorizacionNombre", e.target.value)} />
+            {jefe.nombres.trim() && !v.autorizacionNombre && (
+              <button type="button" className="mt-1 text-sm font-semibold text-marca-700" onClick={() => set("autorizacionNombre", jefe.nombres.trim())}>
+                Usar “{jefe.nombres.trim()}”
+              </button>
+            )}
           </Campo>
         )}
-        <Campo label="Observaciones generales">
-          <textarea className="input" rows={3} value={v.observaciones ?? ""} onChange={(e) => set("observaciones", e.target.value)} />
+        <Campo label="Observaciones (opcional)">
+          <textarea className="input" rows={2} value={v.observaciones ?? ""} onChange={(e) => set("observaciones", e.target.value)} />
         </Campo>
       </Seccion>
 

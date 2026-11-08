@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { MapaPunto } from "@/components/mapa/dinamicos";
 import { obtenerVivienda } from "@/lib/consultas";
 import { miniatura } from "@/lib/imagenes";
-import { edad, ESTADO_VIVIENDA_LABEL } from "@/lib/opciones";
+import { edadPersona, ESTADO_VIVIENDA_LABEL } from "@/lib/opciones";
 import { puede } from "@/lib/permisos";
 import { requerirPermiso } from "@/lib/session";
 import { EliminarVivienda } from "./eliminar";
@@ -78,31 +78,40 @@ export default async function FichaVivienda({ params }: PageProps<"/viviendas/[i
           {v.referencia && <p className="text-sm text-stone-600">📍 {v.referencia}</p>}
         </div>
 
-        <div className="tarjeta">
-          <h2 className="mb-3 font-semibold">La vivienda</h2>
-          {![v.nombrePredio, v.tenencia, v.materialParedes, v.materialPiso, v.numCuartos, v.energia, v.gas, v.internet, v.senalCelular, v.saneamiento, v.manejoBasuras, v.actividadEconomica, v.observaciones].some((x) => x !== null && x !== "") && (
-            <p className="text-sm text-stone-500">Sin características registradas.</p>
-          )}
-          <dl className="grid grid-cols-2 gap-3 text-sm">
-            <Dato l="Predio / finca" v={v.nombrePredio} />
-            <Dato l="Tenencia" v={v.tenencia} />
-            <Dato l="Paredes" v={v.materialParedes} />
-            <Dato l="Piso" v={v.materialPiso} />
-            <Dato l="Cuartos" v={v.numCuartos} />
-            <Dato l="Energía" v={siNo(v.energia)} />
-            <Dato l="Cocina con" v={v.gas} />
-            <Dato l="Internet" v={siNo(v.internet)} />
-            <Dato l="Señal celular" v={v.senalCelular} />
-            <Dato l="Aguas residuales" v={v.saneamiento} />
-            <Dato l="Basuras" v={v.manejoBasuras} />
-            <Dato l="Altitud" v={v.altitudM != null ? `${v.altitudM} m` : null} />
-            <div className="col-span-2">
-              <Dato l="Actividad económica" v={v.actividadEconomica} />
-            </div>
-            <div className="col-span-2">
-              <Dato l="Observaciones" v={v.observaciones} />
-            </div>
-          </dl>
+        <div className="space-y-4">
+          <div className="tarjeta">
+            <h2 className="mb-3 font-semibold">La casa</h2>
+            <dl className="grid grid-cols-2 gap-3 text-sm">
+              <Dato l="Predio" v={v.nombrePredio} />
+              <Dato l="Alquilada o propia" v={v.tenencia} />
+              <div className="col-span-2">
+                <Dato l="Principal sustento" v={v.actividadEconomica} />
+              </div>
+              <div className="col-span-2">
+                <Dato l="Observaciones" v={v.observaciones} />
+              </div>
+            </dl>
+            {!v.nombrePredio && !v.tenencia && !v.actividadEconomica && !v.observaciones && (
+              <p className="text-sm text-stone-500">Sin datos registrados.</p>
+            )}
+          </div>
+          <div className="tarjeta">
+            <h2 className="mb-3 font-semibold">💧 Acueducto</h2>
+            {v.usaAcueducto ? (
+              <dl className="grid grid-cols-2 gap-3 text-sm">
+                <Dato l="Servicio" v="Sí" />
+                <Dato l="Matrícula del derecho" v={siNo(v.tieneMatricula) ?? "Sin dato"} />
+                <Dato l="Número de matrícula" v={v.numeroMatricula} />
+                <Dato l="Titular de la matrícula" v={v.titularMatriculaNombre} />
+                <Dato
+                  l="Teléfono del titular"
+                  v={v.titularMatriculaTelefono && <a className="text-marca-700" href={`tel:${v.titularMatriculaTelefono}`}>{v.titularMatriculaTelefono}</a>}
+                />
+              </dl>
+            ) : (
+              <p className="text-sm text-stone-600">No tiene servicio de acueducto{v.otraFuenteAgua ? ` · toma agua de: ${v.otraFuenteAgua}` : ""}.</p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -111,7 +120,7 @@ export default async function FichaVivienda({ params }: PageProps<"/viviendas/[i
         {personas.length ? (
           <div className="divide-y divide-stone-100">
             {personas.map((p) => {
-              const e = edad(p.fechaNacimiento);
+              const e = edadPersona(p);
               return (
                 <details key={p.id} className="py-2">
                   <summary className="flex cursor-pointer list-none items-center gap-3">
@@ -120,9 +129,9 @@ export default async function FichaVivienda({ params }: PageProps<"/viviendas/[i
                     </span>
                     <span className="flex-1">
                       <span className="font-medium">{p.nombres} {p.apellidos}</span>
-                      {p.esJefeHogar && <span className="ml-2 rounded bg-marca-100 px-1.5 text-xs text-marca-800">Jefe(a)</span>}
+                      
                       <span className="block text-sm text-stone-500">
-                        {[p.parentesco, e !== null ? `${e} años` : null, p.tipoDocumento && p.numeroDocumento ? `${p.tipoDocumento} ${p.numeroDocumento}` : null]
+                        {[p.esJefeHogar ? "Cabeza de familia" : null, e !== null ? `${e} años` : null, p.numeroDocumento ? `Doc. ${p.numeroDocumento}` : null]
                           .filter(Boolean)
                           .join(" · ")}
                       </span>

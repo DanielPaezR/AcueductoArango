@@ -1,6 +1,6 @@
 /** Listas de opciones de los formularios del censo. */
 export const OPC = {
-  tenencia: ["Propia", "Arriendo", "Familiar", "Cuidandero / mayordomo", "Posesión", "Otra"],
+  tenencia: ["Propia", "Alquilada", "Otra"],
   materialParedes: ["Ladrillo / bloque", "Tapia / bahareque", "Madera", "Prefabricado", "Mixto", "Otro"],
   materialPiso: ["Cemento", "Baldosa", "Madera", "Tierra", "Otro"],
   gas: ["Pipeta", "Leña", "Eléctrica", "Mixto", "Ninguno"],
@@ -46,6 +46,23 @@ export const ESTADO_VIVIENDA_LABEL: Record<string, string> = {
   en_construccion: "En construcción",
   demolida: "Demolida",
 };
+
+/** Edad actual de una persona: por fecha de nacimiento o, si no hay, por la edad reportada en la visita. */
+export function edadPersona(p: {
+  fechaNacimiento?: string | null;
+  edadReportada?: number | null;
+  edadReportadaEn?: string | null;
+}): number | null {
+  const porFecha = edad(p.fechaNacimiento);
+  if (porFecha !== null) return porFecha;
+  if (p.edadReportada == null) return null;
+  if (!p.edadReportadaEn) return p.edadReportada;
+  const [y, m, d] = p.edadReportadaEn.split("-").map(Number);
+  const hoy = new Date();
+  let anios = hoy.getFullYear() - y;
+  if (hoy.getMonth() + 1 < m || (hoy.getMonth() + 1 === m && hoy.getDate() < d)) anios--;
+  return p.edadReportada + Math.max(0, anios);
+}
 
 export function edad(fechaNacimiento: string | null | undefined, hoy = new Date()): number | null {
   if (!fechaNacimiento) return null;

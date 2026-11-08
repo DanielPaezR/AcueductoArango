@@ -125,6 +125,11 @@ export const viviendas = pgTable(
     // Agua
     usaAcueducto: boolean("usa_acueducto").notNull().default(false),
     otraFuenteAgua: varchar("otra_fuente_agua", { length: 60 }), // nacimiento propio, quebrada...
+    // Matrícula (derecho) del acueducto
+    tieneMatricula: boolean("tiene_matricula"),
+    numeroMatricula: varchar("numero_matricula", { length: 30 }),
+    titularMatriculaNombre: varchar("titular_matricula_nombre", { length: 160 }), // si la casa está alquilada
+    titularMatriculaTelefono: varchar("titular_matricula_telefono", { length: 30 }),
 
     // Habeas Data (Ley 1581 de 2012)
     autorizacionDatos: boolean("autorizacion_datos").notNull().default(false),
@@ -155,6 +160,10 @@ export const personas = pgTable(
     tipoDocumento: varchar("tipo_documento", { length: 10 }), // CC, TI, RC, CE, PPT
     numeroDocumento: varchar("numero_documento", { length: 30 }),
     fechaNacimiento: date("fecha_nacimiento"),
+    /** Edad dicha en la visita (cuando no se conoce la fecha de nacimiento) y fecha en que se dijo,
+     *  para calcular la edad actual con el paso del tiempo. */
+    edadReportada: integer("edad_reportada"),
+    edadReportadaEn: date("edad_reportada_en"),
     sexo: varchar("sexo", { length: 10 }),
     parentesco: varchar("parentesco", { length: 30 }), // jefe, cónyuge, hijo(a), nieto(a)...
     esJefeHogar: boolean("es_jefe_hogar").notNull().default(false),

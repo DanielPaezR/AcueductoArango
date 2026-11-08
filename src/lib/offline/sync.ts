@@ -4,28 +4,107 @@ import { dbLocal } from "./db";
 
 export type ResultadoSync = { subidas: number; fallidas: number; ultimoError?: string; sesionVencida?: boolean };
 
-let enCurso: Promise<ResultadoSync> | null = null;
-
-/** Sube todo lo pendiente. Solo una sincronización a la vez. */
-export function sincronizar(): Promise<ResultadoSync> {
-  enCurso ??= ejecutar().finally(() => {
-    enCurso = null;
-  });
-  return enCurso;
+/** fetch con tiempo límite: con señal débil una petición nunca se queda colgada. */
+function conTiempo(url: string, init: RequestInit, ms: number) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { ...init, signal: ctrl.signal }).finally(() => clearTimeout(t));
 }
 
-async function ejecutar(): Promise<ResultadoSync> {
-  const r: ResultadoSync = { subidas: 0, fallidas: 0 };
+/** Error de red o de tiempo (no del servidor): se deja de intentar hasta la próxima vez. */
+const esDeRed = (e: unknown) => e instanceof TypeError || (e instanceof DOMException && e.name === "AbortError");
 
+const TIEMPO_DATOS = 20_000;
+const TIEMPO_FOTO = 90_000;
+
+/**
+ * Dos carriles independientes, cada uno con una sola ejecución a la vez:
+ * - datos (casas, puntos, tuberías, arreglos): livianos, siempre primero;
+ * - archivos (fotos y firmas): pesados; una foto lenta nunca frena los datos.
+ * Si se pide un carril mientras corre, al terminar se repite para incluir lo nuevo.
+ */
+function carril(tarea: (r: ResultadoSync) => Promise<void>) {
+  let enCurso: Promise<ResultadoSync> | null = null;
+  let repetir = false;
+  return (): Promise<ResultadoSync> => {
+    if (enCurso) {
+      repetir = true;
+      return enCurso;
+    }
+    enCurso = (async () => {
+      const r: ResultadoSync = { subidas: 0, fallidas: 0 };
+      do {
+        repetir = false;
+        await tarea(r);
+      } while (repetir && !r.sesionVencida && navigator.onLine);
+      return r;
+    })().finally(() => {
+      enCurso = null;
+    });
+    return enCurso;
+  };
+}
+
+const carrilDatos = carril(subirDatos);
+const carrilArchivos = carril(subirArchivos);
+
+/** Sube todo lo pendiente: primero los datos, luego fotos y firmas. */
+export async function sincronizar(): Promise<ResultadoSync> {
+  const d = await carrilDatos();
+  if (d.sesionVencida) return d;
+  const a = await carrilArchivos();
+  return {
+    subidas: d.subidas + a.subidas,
+    fallidas: d.fallidas + a.fallidas,
+    ultimoError: a.ultimoError ?? d.ultimoError,
+    sesionVencida: a.sesionVencida,
+  };
+}
+
+/**
+ * Sube YA un solo registro (solo sus datos, que pesan poco) para poder abrir su ficha enseguida.
+ * Las fotos y la firma quedan en la cola y suben en segundo plano.
+ */
+export async function subirAhora(tabla: "viviendas" | "operaciones", id: string): Promise<{ subido: boolean; error?: string }> {
+  if (!navigator.onLine) return { subido: false };
+  const reg = tabla === "viviendas" ? await dbLocal.viviendas.get(id) : await dbLocal.operaciones.get(id);
+  if (!reg) return { subido: true };
+  const url = tabla === "viviendas" ? "/api/sync/vivienda" : `/api/sync/${(reg as { tipo: string }).tipo}`;
+  try {
+    const res = await conTiempo(
+      url,
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(reg.payload) },
+      TIEMPO_DATOS,
+    );
+    const body = await res.json().catch(() => ({}));
+    if (res.status === 401) return { subido: false, error: body.error };
+    if (!res.ok || !body.ok) {
+      const error = body.error ?? `Error ${res.status}`;
+      await (tabla === "viviendas" ? dbLocal.viviendas : dbLocal.operaciones).update(id, { error });
+      return { subido: false, error };
+    }
+    await (tabla === "viviendas" ? dbLocal.viviendas : dbLocal.operaciones).delete(id);
+    return { subido: true };
+  } catch (e) {
+    if (esDeRed(e)) return { subido: false };
+    return { subido: false, error: (e as Error).message };
+  } finally {
+    // Fotos, firma y cualquier otro pendiente siguen en segundo plano
+    void sincronizar();
+  }
+}
+
+/** Carril de datos: casas y registros del acueducto. Corta al primer error de red. */
+async function subirDatos(r: ResultadoSync): Promise<void> {
   for (const p of await dbLocal.viviendas.orderBy("guardadoEn").toArray()) {
     try {
-      const res = await fetch("/api/sync/vivienda", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(p.payload),
-      });
+      const res = await conTiempo(
+        "/api/sync/vivienda",
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p.payload) },
+        TIEMPO_DATOS,
+      );
       const body = await res.json().catch(() => ({}));
-      if (res.status === 401) return { ...r, sesionVencida: true, ultimoError: body.error };
+      if (res.status === 401) return void Object.assign(r, { sesionVencida: true, ultimoError: body.error });
       if (!res.ok || !body.ok) throw new Error(body.error ?? `Error ${res.status}`);
       await dbLocal.viviendas.delete(p.id);
       r.subidas++;
@@ -33,7 +112,7 @@ async function ejecutar(): Promise<ResultadoSync> {
       r.fallidas++;
       r.ultimoError = (e as Error).message;
       await dbLocal.viviendas.update(p.id, { intentos: p.intentos + 1, error: r.ultimoError });
-      if (e instanceof TypeError) return r; // sin red: no seguir intentando
+      if (esDeRed(e)) return; // sin red o muy lenta: no seguir intentando
     }
   }
 
@@ -44,13 +123,13 @@ async function ejecutar(): Promise<ResultadoSync> {
   );
   for (const op of ops) {
     try {
-      const res = await fetch(`/api/sync/${op.tipo}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(op.payload),
-      });
+      const res = await conTiempo(
+        `/api/sync/${op.tipo}`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(op.payload) },
+        TIEMPO_DATOS,
+      );
       const body = await res.json().catch(() => ({}));
-      if (res.status === 401) return { ...r, sesionVencida: true, ultimoError: body.error };
+      if (res.status === 401) return void Object.assign(r, { sesionVencida: true, ultimoError: body.error });
       if (!res.ok || !body.ok) throw new Error(body.error ?? `Error ${res.status}`);
       await dbLocal.operaciones.delete(op.id);
       r.subidas++;
@@ -58,10 +137,13 @@ async function ejecutar(): Promise<ResultadoSync> {
       r.fallidas++;
       r.ultimoError = (e as Error).message;
       await dbLocal.operaciones.update(op.id, { intentos: op.intentos + 1, error: r.ultimoError });
-      if (e instanceof TypeError) return r;
+      if (esDeRed(e)) return;
     }
   }
+}
 
+/** Carril de archivos: fotos y firmas, solo de registros que ya están en el servidor. */
+async function subirArchivos(r: ResultadoSync): Promise<void> {
   const pendientesViv = new Set([
     ...(await dbLocal.viviendas.toCollection().primaryKeys()),
     ...(await dbLocal.operaciones.toCollection().primaryKeys()),
@@ -75,9 +157,9 @@ async function ejecutar(): Promise<ResultadoSync> {
       fd.set("entidadId", f.entidadId);
       fd.set("tipo", f.tipo);
       fd.set("archivo", f.blob, `${f.id}.${f.tipo === "firma" ? "png" : "jpg"}`);
-      const res = await fetch("/api/adjuntos", { method: "POST", body: fd });
+      const res = await conTiempo("/api/adjuntos", { method: "POST", body: fd }, TIEMPO_FOTO);
       const body = await res.json().catch(() => ({}));
-      if (res.status === 401) return { ...r, sesionVencida: true, ultimoError: body.error };
+      if (res.status === 401) return void Object.assign(r, { sesionVencida: true, ultimoError: body.error });
       if (!res.ok || !body.ok) throw new Error(body.error ?? `Error ${res.status}`);
       await dbLocal.fotos.delete(f.id);
       r.subidas++;
@@ -85,10 +167,9 @@ async function ejecutar(): Promise<ResultadoSync> {
       r.fallidas++;
       r.ultimoError = (e as Error).message;
       await dbLocal.fotos.update(f.id, { intentos: f.intentos + 1, error: r.ultimoError });
-      if (e instanceof TypeError) return r;
+      if (esDeRed(e)) return;
     }
   }
-  return r;
 }
 
 /** Reduce una foto del celular (5–10 MB) a ~1600px JPEG (~300 KB) antes de guardarla. */
@@ -127,9 +208,5 @@ export async function guardarOperacion(
         intentos: 0,
       });
   });
-  if (!navigator.onLine) return { subido: false };
-  await sincronizar();
-  const sigue = await dbLocal.operaciones.get(op.id);
-  if (!sigue) return { subido: true };
-  return { subido: false, error: sigue.error && !/fetch|network/i.test(sigue.error) ? sigue.error : undefined };
+  return subirAhora("operaciones", op.id);
 }

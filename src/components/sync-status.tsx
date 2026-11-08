@@ -21,13 +21,28 @@ export function useEnLinea() {
   return useSyncExternalStore(suscribirConexion, () => navigator.onLine, () => true);
 }
 
-export function usePendientes() {
+/** Pendientes por tipo; `total` = todo lo que falta por subir. */
+export function useDetallePendientes() {
   return (
-    useLiveQuery(
-      async () => (await dbLocal.viviendas.count()) + (await dbLocal.operaciones.count()) + (await dbLocal.fotos.count()),
-      [],
-    ) ?? 0
+    useLiveQuery(async () => {
+      const [casas, otros, fotos] = await Promise.all([dbLocal.viviendas.count(), dbLocal.operaciones.count(), dbLocal.fotos.count()]);
+      return { casas, otros, fotos, total: casas + otros + fotos };
+    }, []) ?? { casas: 0, otros: 0, fotos: 0, total: 0 }
   );
+}
+
+export function usePendientes() {
+  return useDetallePendientes().total;
+}
+
+/** "1 casa y 2 fotos" */
+function describir(d: { casas: number; otros: number; fotos: number }) {
+  const partes = [
+    d.casas && `${d.casas} casa${d.casas === 1 ? "" : "s"}`,
+    d.otros && `${d.otros} registro${d.otros === 1 ? "" : "s"} del acueducto`,
+    d.fotos && `${d.fotos} foto${d.fotos === 1 ? "" : "s"} o firma${d.fotos === 1 ? "" : "s"}`,
+  ].filter(Boolean) as string[];
+  return partes.length > 1 ? `${partes.slice(0, -1).join(", ")} y ${partes.at(-1)}` : (partes[0] ?? "");
 }
 
 /** Páginas que se guardan en el teléfono para poder trabajar sin señal. */
@@ -61,17 +76,18 @@ export function SyncMotor() {
 /** Indicador compacto para la barra verde superior. */
 export function SyncIndicador() {
   const enLinea = useEnLinea();
-  const pendientes = usePendientes();
+  const d = useDetallePendientes();
 
-  if (pendientes > 0)
+  if (d.total > 0)
     return (
       <Link
         href="/viviendas/pendientes"
         className="chip bg-ocre-100 py-1 text-ocre-800 ring-1 ring-ocre-500/40"
-        aria-label={`${pendientes} registros sin subir`}
+        title={`Por subir: ${describir(d)}`}
+        aria-label={`Por subir: ${describir(d)}`}
       >
-        <CloudUpload className="size-4" aria-hidden />
-        <span className="num">{pendientes}</span> sin subir
+        <CloudUpload className={`size-4 ${enLinea ? "animate-pulse" : ""}`} aria-hidden />
+        <span className="num">{d.total}</span> por subir
       </Link>
     );
 

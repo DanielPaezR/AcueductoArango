@@ -9,7 +9,7 @@ import { Firma } from "@/components/firma";
 import { avisoVisita } from "@/lib/legal";
 import { MapaSelector } from "@/components/mapa/dinamicos";
 import { dbLocal } from "@/lib/offline/db";
-import { comprimirImagen, sincronizar } from "@/lib/offline/sync";
+import { comprimirImagen, subirAhora } from "@/lib/offline/sync";
 import { edadPersona, OPC } from "@/lib/opciones";
 import type { PersonaInput, ViviendaInput } from "@/lib/validacion";
 
@@ -221,17 +221,14 @@ export function ViviendaForm({
           });
       });
 
-      if (navigator.onLine) {
-        await sincronizar();
-        const sigue = await dbLocal.viviendas.get(v.id);
-        if (!sigue) {
-          router.push(`/viviendas/${v.id}`);
-          router.refresh();
-          return;
-        }
-        // Error de validación del servidor: mostrarlo (los datos siguen guardados en el teléfono)
-        if (sigue.error && !/fetch|network/i.test(sigue.error)) setError(`El servidor respondió: ${sigue.error}`);
+      // Sube solo los datos de la casa (rápido) y abre la ficha; las fotos y la firma siguen en segundo plano
+      const r = await subirAhora("viviendas", v.id);
+      if (r.subido) {
+        router.push(`/viviendas/${v.id}`);
+        router.refresh();
+        return;
       }
+      if (r.error) setError(`El servidor respondió: ${r.error}`);
       setGuardadaLocal(true);
     } catch (e) {
       setError(`No se pudo guardar: ${(e as Error).message}`);

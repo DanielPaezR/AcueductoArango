@@ -31,8 +31,8 @@ inicializada desde la plantilla del rol (`src/lib/permisos.ts`).
 - [ ] **2. Acueducto**: elementos de red, tuberías, mantenimientos y compras (Cloudinary)
 - [x] **3. Cobros y tesorería**: suscriptores desde el censo, tarifas con historial, mensualidad, pagos, estado de cuenta, cuentas y movimientos con aprobación, página pública `/transparencia`
 - [x] **2. Red del acueducto y fontanero**: puntos (bocatoma, tanques, válvulas…) y tuberías dibujadas en el mapa, arreglos con materiales, mano de obra, factura y fotos antes/después, todo sin señal; envío de facturas a tesorería
-- [ ] Recibos en PDF / impresión
-- [ ] **4. Ayudas/proyectos y reportes** (Excel)
+- [x] Recibos de pago y cuentas de cobro mensuales imprimibles (o PDF desde el navegador)
+- [x] **4. Ayudas/proyectos y reportes**: proyectos con beneficiarios por casa, población por edades y sectores, 6 reportes en Excel
 - [ ] **5. Portal del suscriptor**
 
 ## Modo offline (cómo funciona)

@@ -113,6 +113,11 @@ export default async function Suscriptor({ params }: PageProps<"/suscriptores/[i
                   <div className={`font-semibold ${l.anulado ? "text-stone-500 line-through" : "text-stone-900"}`}>{l.detalle}</div>
                   <div className="num text-sm text-stone-600">{fechaCorta(l.fecha)}</div>
                   {l.anulado && <div className="text-sm text-teja-700">Anulado: {l.motivo}</div>}
+                  {l.tipo === "pago" && (
+                    <Link href={`/imprimir/recibo/${l.id}`} className="mr-3 inline-block text-sm font-semibold text-marca-700 underline">
+                      Ver recibo
+                    </Link>
+                  )}
                   {!l.anulado && puedeAnular && <AnularBoton id={l.id} tipo={l.tipo} />}
                 </div>
                 <div className="shrink-0 text-right">

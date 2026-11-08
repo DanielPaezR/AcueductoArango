@@ -1,4 +1,5 @@
 import { desc, eq, sql } from "drizzle-orm";
+import Link from "next/link";
 import { db, schema } from "@/db";
 import { fechaCorta, hoyBogota, nombreMes, pesos } from "@/lib/dinero";
 import { resumenCartera, tarifaVigente } from "@/lib/finanzas";
@@ -100,7 +101,12 @@ export default async function Facturacion() {
                     <span className="num">{fechaCorta(p.fechaVencimiento)}</span>
                   </div>
                 </div>
-                <div className="num font-bold">{pesos(p.total)}</div>
+                <div className="text-right">
+                  <div className="num font-bold">{pesos(p.total)}</div>
+                  <Link href={`/imprimir/cobros?mes=${p.anio}-${String(p.mes).padStart(2, "0")}`} className="text-sm font-semibold text-marca-700 underline">
+                    Imprimir cuentas de cobro
+                  </Link>
+                </div>
               </li>
             ))}
           </ul>

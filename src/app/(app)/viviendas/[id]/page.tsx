@@ -3,6 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { zocaloVivienda } from "@/components/fila-vivienda";
 import { MapaPunto } from "@/components/mapa/dinamicos";
+import { and, eq, isNull } from "drizzle-orm";
+import { db, schema } from "@/db";
+import { TIPOS_PROYECTO } from "@/lib/ayudas";
+import { fechaCorta } from "@/lib/dinero";
 import { obtenerVivienda } from "@/lib/consultas";
 import { miniatura } from "@/lib/imagenes";
 import { edadPersona, ESTADO_VIVIENDA_LABEL } from "@/lib/opciones";
@@ -31,6 +35,13 @@ export default async function FichaVivienda({ params }: PageProps<"/viviendas/[i
   if (!d) notFound();
   const { v, personas, adjuntos, sector, creador } = d;
   const jefe = personas.find((p) => p.esJefeHogar) ?? personas[0];
+  const ayudas = puede(u, "ayudas", "ver")
+    ? await db
+        .select({ id: schema.participaciones.id, fecha: schema.participaciones.fecha, detalle: schema.participaciones.detalle, proyectoId: schema.proyectos.id, nombre: schema.proyectos.nombre, tipo: schema.proyectos.tipo })
+        .from(schema.participaciones)
+        .innerJoin(schema.proyectos, eq(schema.proyectos.id, schema.participaciones.proyectoId))
+        .where(and(eq(schema.participaciones.viviendaId, id), isNull(schema.participaciones.deletedAt), isNull(schema.proyectos.deletedAt)))
+    : [];
   const sinAutorizacion = !v.autorizacionDatos && personas.length > 0;
   const fmt = (f: Date) =>
     f.toLocaleDateString("es-CO", { timeZone: "America/Bogota", day: "numeric", month: "short", year: "numeric" });
@@ -201,6 +212,23 @@ export default async function FichaVivienda({ params }: PageProps<"/viviendas/[i
           <p className="text-stone-600">No hay personas registradas.</p>
         )}
       </section>
+
+      {ayudas.length > 0 && (
+        <section className="tarjeta" aria-labelledby="ayudas">
+          <h2 id="ayudas" className="mb-2 text-lg font-bold">Ayudas y proyectos</h2>
+          <ul className="divide-y divide-stone-200">
+            {ayudas.map((a) => (
+              <li key={a.id} className="py-2.5">
+                <Link href={`/ayudas/${a.proyectoId}`} className="font-semibold text-marca-700 hover:underline">{a.nombre}</Link>
+                <div className="text-sm text-stone-600">
+                  {TIPOS_PROYECTO[a.tipo as keyof typeof TIPOS_PROYECTO]} · <span className="num">{fechaCorta(a.fecha)}</span>
+                  {a.detalle && <> · {a.detalle}</>}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {adjuntos.length > 0 && (
         <section className="tarjeta" aria-labelledby="fotos">

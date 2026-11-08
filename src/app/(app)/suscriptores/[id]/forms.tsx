@@ -91,7 +91,7 @@ export function AnularBoton({ id, tipo }: { id: string; tipo: "cargo" | "pago" }
   const [pendiente, start] = useTransition();
   return (
     <button
-      className="mt-1 block text-sm font-semibold text-teja-700 underline"
+      className="mt-1 inline-block text-sm font-semibold text-teja-700 underline"
       disabled={pendiente}
       onClick={() => {
         const motivo = prompt(tipo === "pago" ? "¿Por qué se anula este pago? También se anula su ingreso en tesorería." : "¿Por qué se anula este cobro?");

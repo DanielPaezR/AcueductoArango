@@ -21,14 +21,14 @@ export const NAV: ItemNav[] = [
   { href: "/", label: "Inicio", icono: "inicio" },
   { href: "/mapa", label: "Mapa de la vereda", icono: "mapa", seccion: "mapa_usuarios", fase: 1 },
   { href: "/viviendas", label: "Viviendas", icono: "viviendas", seccion: "censo", fase: 1 },
-  { href: "/ayudas", label: "Ayudas y proyectos", icono: "ayudas", seccion: "ayudas", fase: 4 },
+  { href: "/ayudas", label: "Ayudas y proyectos", icono: "ayudas", seccion: "ayudas" },
   { href: "/acueducto", label: "Red del acueducto", icono: "acueducto", seccion: "acueducto_red", },
   { href: "/mantenimientos", label: "Mantenimientos", icono: "mantenimientos", seccion: "mantenimientos", },
   { href: "/suscriptores", label: "Suscriptores", icono: "suscriptores", seccion: "suscriptores" },
   { href: "/facturacion", label: "Cobros del mes", icono: "facturacion", seccion: "facturacion" },
   { href: "/tesoreria", label: "Tesorería", icono: "tesoreria", seccion: "tesoreria" },
   { href: "/transparencia", label: "Página pública", icono: "transparencia" },
-  { href: "/reportes", label: "Reportes", icono: "reportes", seccion: "reportes", fase: 4 },
+  { href: "/reportes", label: "Reportes", icono: "reportes", seccion: "reportes" },
   { href: "/usuarios", label: "Usuarios", icono: "usuarios", seccion: "usuarios" },
 ];
 

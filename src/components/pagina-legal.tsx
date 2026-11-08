@@ -18,7 +18,7 @@ export function PaginaLegal({ titulo, version, vigencia, children }: { titulo: s
         <nav className="mt-10 flex flex-wrap gap-4 border-t border-stone-200 pt-5 font-semibold text-marca-700">
           <Link href="/privacidad" className="underline">Política de datos personales</Link>
           <Link href="/terminos" className="underline">Términos de uso</Link>
-          <Link href="/transparencia" className="underline">Cuentas claras del acueducto</Link>
+          <Link href="/transparencia" className="underline">Cuentas claras</Link>
           <Link href="/login" className="underline">Ingresar</Link>
         </nav>
       </main>

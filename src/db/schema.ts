@@ -450,6 +450,8 @@ export const pagos = pgTable(
 export const cuentas = pgTable("cuentas", {
   id: serial("id").primaryKey(),
   nombre: varchar("nombre", { length: 80 }).notNull(), // "Cuenta de ahorros Bancolombia"
+  /** A qué plata pertenece: el acueducto y la Junta llevan cuentas separadas. */
+  fondo: varchar("fondo", { length: 12 }).notNull().default("acueducto"), // acueducto, junta
   tipo: varchar("tipo", { length: 20 }).notNull().default("banco"), // banco, efectivo, billetera
   entidad: varchar("entidad", { length: 60 }),
   /** Solo los últimos dígitos: la página pública no debe exponer el número completo. */

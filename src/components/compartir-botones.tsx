@@ -42,7 +42,7 @@ export function BotonesCompartir({ url, mensaje }: { url: string; mensaje: strin
         <button
           type="button"
           className="btn-secundario sm:col-span-2"
-          onClick={() => navigator.share({ title: "Cuentas claras del acueducto", text: mensaje, url }).catch(() => {})}
+          onClick={() => navigator.share({ title: "Cuentas claras de la vereda Arango", text: mensaje, url }).catch(() => {})}
         >
           <Share2 className="size-5" aria-hidden />
           Compartir por otra aplicación

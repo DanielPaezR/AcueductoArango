@@ -122,6 +122,7 @@ const REPORTES: Record<string, Reporte> = {
     nombre: "Movimientos de tesorería",
     columnas: [
       { titulo: "Fecha", clave: "fecha", ancho: 12 },
+      { titulo: "Fondo", clave: "fondo", ancho: 12 },
       { titulo: "Cuenta", clave: "cuenta", ancho: 22 },
       { titulo: "Tipo", clave: "tipo" },
       { titulo: "Categoría", clave: "categoria", ancho: 20 },
@@ -133,7 +134,7 @@ const REPORTES: Record<string, Reporte> = {
       { titulo: "Motivo (rechazo/anulación)", clave: "motivo", ancho: 28 },
     ],
     filas: async () =>
-      traducir(await filas(sql`select m.fecha::text, c.nombre as cuenta, m.tipo, m.categoria, m.concepto, m.valor::float as valor, m.estado,
+      traducir(await filas(sql`select m.fecha::text, case c.fondo when 'junta' then 'Junta' else 'Acueducto' end as fondo, c.nombre as cuenta, m.tipo, m.categoria, m.concepto, m.valor::float as valor, m.estado,
         m.cargo_registro, m.cargo_aprobacion, m.motivo
         from movimientos m join cuentas c on c.id = m.cuenta_id order by m.fecha desc, m.created_at desc`), { tipo: "tipoMov", estado: "estadoMov" }),
   },

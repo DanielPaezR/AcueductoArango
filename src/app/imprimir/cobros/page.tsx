@@ -15,7 +15,7 @@ export default async function Cobros({ searchParams }: PageProps<"/imprimir/cobr
   if (!periodo) return <p className="text-lg">Todavía no se han generado los cobros de {nombreMes(mes)} {anio}.</p>;
   const [estados, cuentas, viviendas, tarifa] = await Promise.all([
     estadoSuscriptores(),
-    db.select().from(schema.cuentas).where(eq(schema.cuentas.activa, true)),
+    db.select().from(schema.cuentas).where(and(eq(schema.cuentas.activa, true), eq(schema.cuentas.fondo, "acueducto"))),
     db.select({ id: schema.viviendas.id, codigo: schema.viviendas.codigo, referencia: schema.viviendas.referencia, nombrePredio: schema.viviendas.nombrePredio }).from(schema.viviendas).where(isNull(schema.viviendas.deletedAt)),
     db.query.tarifas.findFirst({ where: eq(schema.tarifas.id, periodo.tarifaId) }),
   ]);

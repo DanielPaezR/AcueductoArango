@@ -8,11 +8,12 @@ import { hoyBogota } from "./dinero";
 const { cuentas: C, movimientos: M, suscriptores: S, cargos: CG, pagos: PG, tarifas: T, periodos: PE } = schema;
 
 /** Saldo de cada cuenta = saldo inicial + ingresos aprobados − egresos aprobados. */
-export async function cuentasConSaldo(soloActivas = false) {
+export async function cuentasConSaldo(soloActivas = false, fondo?: "acueducto" | "junta") {
   const filas = await db
     .select({
       id: C.id,
       nombre: C.nombre,
+      fondo: C.fondo,
       tipo: C.tipo,
       entidad: C.entidad,
       ultimosDigitos: C.ultimosDigitos,
@@ -24,7 +25,7 @@ export async function cuentasConSaldo(soloActivas = false) {
       pendientes: sql<number>`(select count(*)::int from movimientos m where m.cuenta_id = cuentas.id and m.estado = 'pendiente')`,
     })
     .from(C)
-    .where(soloActivas ? eq(C.activa, true) : undefined)
+    .where(and(soloActivas ? eq(C.activa, true) : undefined, fondo ? eq(C.fondo, fondo) : undefined))
     .orderBy(asc(C.id));
   return filas.map((c) => ({
     ...c,
@@ -104,8 +105,9 @@ export async function resumenCartera() {
 }
 
 /** Movimientos (para la tesorería o la página pública). */
-export async function listarMovimientos(f: { estados?: string[]; cuentaId?: number; limite?: number; offset?: number }) {
+export async function listarMovimientos(f: { estados?: string[]; cuentaId?: number; fondo?: "acueducto" | "junta"; limite?: number; offset?: number }) {
   const conds = [];
+  if (f.fondo) conds.push(eq(C.fondo, f.fondo));
   if (f.estados?.length) conds.push(sql`${M.estado} in ${f.estados}`);
   if (f.cuentaId) conds.push(eq(M.cuentaId, f.cuentaId));
   return db
@@ -122,6 +124,7 @@ export async function listarMovimientos(f: { estados?: string[]; cuentaId?: numb
       cargoAprobacion: M.cargoAprobacion,
       motivo: M.motivo,
       cuenta: C.nombre,
+      fondo: C.fondo,
       cuentaId: M.cuentaId,
       soportes: sql<{ url: string }[]>`coalesce((select json_agg(json_build_object('url', a.url) order by a.created_at)
         from adjuntos a where a.entidad = 'movimiento' and a.entidad_id = movimientos.id and a.deleted_at is null), '[]'::json)`,

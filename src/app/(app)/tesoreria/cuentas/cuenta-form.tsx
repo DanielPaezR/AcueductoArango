@@ -3,10 +3,24 @@
 import { useActionState } from "react";
 import { corregirSaldoInicial, crearCuenta, editarCuenta } from "@/actions/tesoreria";
 
-export function CuentaForm({ hoy }: { hoy: string }) {
+export function CuentaForm({ hoy, fondo }: { hoy: string; fondo?: "acueducto" | "junta" }) {
   const [estado, accion, pendiente] = useActionState(crearCuenta, undefined);
   return (
     <form action={accion} className="space-y-4" key={estado?.ok}>
+      <fieldset>
+        <legend className="label">¿De quién es la plata de esta cuenta?</legend>
+        <div className="grid grid-cols-2 gap-2">
+          {([
+            ["acueducto", "Del acueducto"],
+            ["junta", "De la Junta"],
+          ] as const).map(([v, l]) => (
+            <label key={v} className="flex min-h-12 cursor-pointer items-center gap-2 rounded-lg border border-stone-300 bg-white px-3 font-semibold has-[:checked]:border-marca-700 has-[:checked]:bg-marca-50 has-[:checked]:text-marca-900">
+              <input type="radio" name="fondo" value={v} defaultChecked={(fondo ?? "acueducto") === v} className="size-5 accent-marca-700" />
+              {l}
+            </label>
+          ))}
+        </div>
+      </fieldset>
       <div>
         <label className="label" htmlFor="nombre">Nombre</label>
         <input id="nombre" name="nombre" className="input" placeholder="Ej: Cuenta de ahorros del acueducto" required />

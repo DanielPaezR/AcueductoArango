@@ -4,13 +4,23 @@ import { ArrowDownLeft, ArrowUpRight, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { registrarMovimiento } from "@/actions/tesoreria";
-import { CATEGORIAS } from "@/lib/dinero";
+import { CATEGORIAS_POR_FONDO, FONDOS, type Fondo } from "@/lib/dinero";
 import { comprimirImagen } from "@/lib/offline/sync";
 
 type Foto = { id: string; blob: Blob; url: string };
 
-export function MovimientoForm({ cuentas, hoy }: { cuentas: { id: number; nombre: string }[]; hoy: string }) {
+export function MovimientoForm({
+  cuentas,
+  hoy,
+  fondoInicial,
+}: {
+  cuentas: { id: number; nombre: string; fondo: Fondo }[];
+  hoy: string;
+  fondoInicial: Fondo;
+}) {
   const router = useRouter();
+  const [cuentaId, setCuentaId] = useState(() => (cuentas.find((c) => c.fondo === fondoInicial) ?? cuentas[0])?.id);
+  const fondo = cuentas.find((c) => c.id === cuentaId)?.fondo ?? "acueducto";
   const [tipo, setTipo] = useState<"ingreso" | "egreso">("egreso");
   const [fotos, setFotos] = useState<Foto[]>([]);
   const [error, setError] = useState<string>();
@@ -89,21 +99,29 @@ export function MovimientoForm({ cuentas, hoy }: { cuentas: { id: number; nombre
         </div>
         <div>
           <label className="label" htmlFor="categoria">Categoría</label>
-          <select id="categoria" name="categoria" className="input" key={tipo} required defaultValue="">
+          <select id="categoria" name="categoria" className="input" key={`${tipo}-${fondo}`} required defaultValue="">
             <option value="" disabled>
               Elija…
             </option>
-            {CATEGORIAS[tipo].map((c) => (
+            {CATEGORIAS_POR_FONDO[fondo][tipo].map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
         </div>
         <div>
           <label className="label" htmlFor="cuentaId">Cuenta</label>
-          <select id="cuentaId" name="cuentaId" className="input" defaultValue={cuentas[0]?.id}>
-            {cuentas.map((c) => (
-              <option key={c.id} value={c.id}>{c.nombre}</option>
-            ))}
+          <select id="cuentaId" name="cuentaId" className="input" value={cuentaId} onChange={(e) => setCuentaId(Number(e.target.value))}>
+            {(Object.keys(FONDOS) as Fondo[]).map((f) =>
+              cuentas.some((c) => c.fondo === f) ? (
+                <optgroup key={f} label={FONDOS[f]}>
+                  {cuentas
+                    .filter((c) => c.fondo === f)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>{c.nombre}</option>
+                    ))}
+                </optgroup>
+              ) : null,
+            )}
           </select>
         </div>
       </div>

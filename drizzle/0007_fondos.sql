@@ -1,0 +1,1 @@
+ALTER TABLE "cuentas" ADD COLUMN "fondo" varchar(12) DEFAULT 'acueducto' NOT NULL;

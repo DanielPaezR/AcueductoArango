@@ -34,7 +34,7 @@ export default async function Mantenimiento({ params }: PageProps<"/mantenimient
   const totalMat = materiales.reduce((a, x) => a + Number(x.cantidad) * Number(x.valorUnitario ?? 0), 0);
   const total = totalMat + Number(m.costoManoObra);
   const puedeTesoreria = puede(u, "tesoreria", "crear");
-  const cuentas = compra && !compra.movimientoId && puedeTesoreria ? await cuentasConSaldo(true) : [];
+  const cuentas = compra && !compra.movimientoId && puedeTesoreria ? await cuentasConSaldo(true, "acueducto") : [];
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">

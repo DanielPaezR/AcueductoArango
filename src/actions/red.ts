@@ -33,6 +33,8 @@ export async function pasarATesoreria(compraId: string, cuentaId: number) {
   const c = await db.query.compras.findFirst({ where: eq(schema.compras.id, compraId) });
   if (!c) throw new Error("La compra no existe");
   if (c.movimientoId) throw new Error("Este gasto ya se envió a tesorería");
+  const cuenta = await db.query.cuentas.findFirst({ where: eq(schema.cuentas.id, cuentaId) });
+  if (!cuenta || !cuenta.activa || cuenta.fondo !== "acueducto") throw new Error("Los gastos del acueducto van a una cuenta del acueducto");
   const m = c.mantenimientoId ? await db.query.mantenimientos.findFirst({ where: eq(schema.mantenimientos.id, c.mantenimientoId) }) : null;
   const yo = await db.query.usuarios.findFirst({ where: eq(schema.usuarios.id, u.id), columns: { cargo: true, rol: true } });
 

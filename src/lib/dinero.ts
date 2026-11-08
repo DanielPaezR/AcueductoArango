@@ -25,26 +25,54 @@ export function fechaCorta(iso: string | null | undefined) {
   return `${d} ${MESES[m - 1].slice(0, 3)} ${y}`;
 }
 
-export const CATEGORIAS = {
-  ingreso: [
-    "Mensualidades",
-    "Matrículas y conexiones",
-    "Multas y reconexiones",
-    "Cuotas extraordinarias",
-    "Donaciones y aportes",
-    "Rendimientos bancarios",
-    "Otros ingresos",
-  ],
-  egreso: [
-    "Materiales",
-    "Mano de obra y fontanería",
-    "Mantenimiento de la red",
-    "Análisis y tratamiento del agua",
-    "Gastos bancarios",
-    "Papelería y administración",
-    "Otros gastos",
-  ],
+export const FONDOS = { acueducto: "Acueducto", junta: "Junta de Acción Comunal" } as const;
+export type Fondo = keyof typeof FONDOS;
+
+/** Categorías de ingresos y gastos según el fondo de la cuenta. */
+export const CATEGORIAS_POR_FONDO = {
+  acueducto: {
+    ingreso: [
+      "Mensualidades",
+      "Matrículas y conexiones",
+      "Multas y reconexiones",
+      "Cuotas extraordinarias",
+      "Donaciones y aportes",
+      "Rendimientos bancarios",
+      "Otros ingresos",
+    ],
+    egreso: [
+      "Materiales",
+      "Mano de obra y fontanería",
+      "Mantenimiento de la red",
+      "Análisis y tratamiento del agua",
+      "Gastos bancarios",
+      "Papelería y administración",
+      "Otros gastos",
+    ],
+  },
+  junta: {
+    ingreso: [
+      "Cuotas de afiliados",
+      "Eventos, rifas y bazares",
+      "Aportes de entidades (Alcaldía, Gobernación…)",
+      "Donaciones",
+      "Rendimientos bancarios",
+      "Otros ingresos",
+    ],
+    egreso: [
+      "Obras y mejoras comunitarias",
+      "Ayudas a familias",
+      "Asambleas y reuniones",
+      "Eventos comunitarios",
+      "Papelería y administración",
+      "Gastos bancarios",
+      "Otros gastos",
+    ],
+  },
 } as const;
+
+/** Compatibilidad: categorías del acueducto. */
+export const CATEGORIAS = CATEGORIAS_POR_FONDO.acueducto;
 
 export const ESTADO_MOVIMIENTO: Record<string, string> = {
   pendiente: "Por aprobar",

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { auditar } from "@/lib/auditoria";
-import { CATEGORIAS, leerPesos } from "@/lib/dinero";
+import { CATEGORIAS_POR_FONDO, leerPesos, type Fondo } from "@/lib/dinero";
 import { ROLES, type Rol } from "@/lib/permisos";
 import { requerirPermiso } from "@/lib/session";
 import type { Estado } from "./auth";
@@ -25,6 +25,7 @@ function refrescar() {
 
 const cuentaSchema = z.object({
   nombre: z.string().trim().min(3, "Escriba el nombre de la cuenta").max(80),
+  fondo: z.enum(["acueducto", "junta"], { message: "Elija si la cuenta es del acueducto o de la Junta" }),
   tipo: z.enum(["banco", "efectivo", "billetera"]),
   entidad: z.string().trim().max(60).optional(),
   ultimosDigitos: z
@@ -63,11 +64,12 @@ export async function registrarMovimiento(form: FormData): Promise<{ error?: str
   const u = await requerirPermiso("tesoreria", "crear");
   const p = movSchema.safeParse(Object.fromEntries(form));
   if (!p.success) return { error: p.error.issues[0].message };
-  if (!(CATEGORIAS[p.data.tipo] as readonly string[]).includes(p.data.categoria)) return { error: "Categoría inválida" };
   const valor = leerPesos(form.get("valor"));
   if (!Number.isFinite(valor) || valor <= 0) return { error: "Escriba un valor mayor a cero" };
   const cuenta = await db.query.cuentas.findFirst({ where: and(eq(C.id, p.data.cuentaId), eq(C.activa, true)) });
   if (!cuenta) return { error: "La cuenta no existe o está inactiva" };
+  if (!(CATEGORIAS_POR_FONDO[cuenta.fondo as Fondo][p.data.tipo] as readonly string[]).includes(p.data.categoria))
+    return { error: "Esa categoría no corresponde a la cuenta elegida" };
 
   const [m] = await db
     .insert(M)

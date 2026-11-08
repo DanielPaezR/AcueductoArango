@@ -7,7 +7,7 @@ import { BotonesCompartir } from "./compartir-botones";
 export async function CompartirPublica() {
   const url = await urlPublica();
   const svg = await qrSvg(url);
-  const mensaje = `Cuentas claras del acueducto de la vereda Arango: aquí puede ver el saldo, los gastos con sus facturas y consultar su estado de cuenta con su cédula. ${url}`;
+  const mensaje = `Cuentas claras de la vereda Arango: aquí puede ver la plata del acueducto y de la Junta, los gastos con sus facturas y consultar su estado de cuenta con su cédula. ${url}`;
   return (
     <section className="tarjeta" aria-labelledby="compartir">
       <h2 id="compartir" className="text-lg font-bold">Compartir la página pública</h2>

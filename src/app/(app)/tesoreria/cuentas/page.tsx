@@ -1,14 +1,15 @@
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
-import { fechaCorta, hoyBogota, pesos } from "@/lib/dinero";
+import { fechaCorta, FONDOS, hoyBogota, pesos, type Fondo } from "@/lib/dinero";
 import { cuentasConSaldo } from "@/lib/finanzas";
 import { requerirPermiso } from "@/lib/session";
 import { CuentaForm, EditarCuentaForm } from "./cuenta-form";
 
 export const metadata = { title: "Cuentas" };
 
-export default async function Cuentas() {
+export default async function Cuentas({ searchParams }: PageProps<"/tesoreria/cuentas">) {
   await requerirPermiso("tesoreria", "aprobar");
+  const { fondo } = await searchParams;
   const cuentas = await cuentasConSaldo();
   return (
     <div className="mx-auto max-w-2xl space-y-5">
@@ -20,7 +21,9 @@ export default async function Cuentas() {
       {cuentas.map((c) => (
         <div key={c.id} className="tarjeta">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <span className="text-lg font-bold">{c.nombre}</span>
+            <span className="text-lg font-bold">
+              {c.nombre} <span className="chip ml-1 bg-stone-200 align-middle text-stone-800">{FONDOS[c.fondo as Fondo]}</span>
+            </span>
             <span className="num text-lg font-bold">{pesos(c.saldo)}</span>
           </div>
           <p className="text-stone-600">
@@ -38,7 +41,7 @@ export default async function Cuentas() {
         <p className="mb-4 text-stone-600">
           Escriba el saldo que tiene la cuenta hoy según el extracto. Desde esa fecha, cada movimiento se registra en el sistema.
         </p>
-        <CuentaForm hoy={hoyBogota()} />
+        <CuentaForm hoy={hoyBogota()} fondo={fondo === "junta" ? "junta" : "acueducto"} />
       </section>
     </div>
   );

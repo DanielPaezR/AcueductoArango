@@ -8,9 +8,10 @@ import { MovimientoForm } from "./movimiento-form";
 
 export const metadata = { title: "Registrar movimiento" };
 
-export default async function NuevoMovimiento() {
+export default async function NuevoMovimiento({ searchParams }: PageProps<"/tesoreria/nuevo">) {
   await requerirPermiso("tesoreria", "crear");
-  const cuentas = (await cuentasConSaldo(true)).map((c) => ({ id: c.id, nombre: c.nombre }));
+  const { fondo } = await searchParams;
+  const cuentas = (await cuentasConSaldo(true)).map((c) => ({ id: c.id, nombre: c.nombre, fondo: c.fondo as "acueducto" | "junta" }));
   if (!cuentas.length) redirect("/tesoreria");
   return (
     <div className="mx-auto max-w-2xl space-y-5">
@@ -23,7 +24,7 @@ export default async function NuevoMovimiento() {
         Todo lo que escriba aquí y las fotos del soporte serán <strong>públicos</strong> una vez la presidencia lo apruebe.
         No escriba nombres de usuarios ni datos personales.
       </p>
-      <MovimientoForm cuentas={cuentas} hoy={hoyBogota()} />
+      <MovimientoForm cuentas={cuentas} hoy={hoyBogota()} fondoInicial={fondo === "junta" ? "junta" : "acueducto"} />
     </div>
   );
 }

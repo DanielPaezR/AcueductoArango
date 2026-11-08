@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { Landmark } from "lucide-react";
 import Link from "next/link";
 import { connection } from "next/server";
@@ -7,11 +7,11 @@ import { ConsultaEstado } from "./consulta";
 import { BotonesCompartir } from "@/components/compartir-botones";
 import { urlPublica } from "@/lib/url-publica";
 import { db, schema } from "@/db";
-import { nombreMes, pesos } from "@/lib/dinero";
+import { FONDOS, nombreMes, pesos, type Fondo } from "@/lib/dinero";
 import { cuentasConSaldo, listarMovimientos, resumenCartera } from "@/lib/finanzas";
 
 export const metadata = {
-  title: "Cuentas claras del acueducto",
+  title: "Cuentas claras de la vereda Arango",
   description: "Saldo, recaudo y movimientos del acueducto de la vereda Arango, publicados por la Junta de Acción Comunal.",
 };
 
@@ -21,19 +21,29 @@ export default async function Transparencia({ searchParams }: PageProps<"/transp
   await connection(); // siempre datos del momento
   const sp = await searchParams;
   const pagina = Math.max(1, Number(sp.pagina) || 1);
+  const fondo: Fondo = sp.fondo === "junta" ? "junta" : "acueducto";
 
-  const [cuentas, cartera, movimientos, [{ total, porAprobar }]] = await Promise.all([
+  const [cuentasTodas, cartera, movimientos, [{ total, porAprobar }]] = await Promise.all([
     cuentasConSaldo(true),
     resumenCartera(),
-    listarMovimientos({ estados: ["aprobado", "anulado"], limite: POR_PAGINA, offset: (pagina - 1) * POR_PAGINA }),
+    listarMovimientos({ estados: ["aprobado", "anulado"], fondo, limite: POR_PAGINA, offset: (pagina - 1) * POR_PAGINA }),
     db
       .select({
         total: sql<number>`count(*) filter (where ${schema.movimientos.estado} in ('aprobado','anulado'))::int`,
         porAprobar: sql<number>`count(*) filter (where ${schema.movimientos.estado} = 'pendiente')::int`,
       })
-      .from(schema.movimientos),
+      .from(schema.movimientos)
+      .innerJoin(schema.cuentas, eq(schema.cuentas.id, schema.movimientos.cuentaId))
+      .where(eq(schema.cuentas.fondo, fondo)),
   ]);
-  const saldoTotal = cuentas.reduce((a, c) => a + c.saldo, 0);
+  const fondos = (Object.keys(FONDOS) as Fondo[])
+    .map((f) => {
+      const cuentas = cuentasTodas.filter((c) => c.fondo === f);
+      return { f, cuentas, saldo: cuentas.reduce((a, c) => a + c.saldo, 0) };
+    })
+    .filter((x) => x.f === "acueducto" || x.cuentas.length > 0);
+  const hayJunta = fondos.some((x) => x.f === "junta");
+  const cuentas = cuentasTodas.filter((c) => c.fondo === fondo);
   const url = await urlPublica();
   const paginas = Math.max(1, Math.ceil(total / POR_PAGINA));
   const ahora = new Date().toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "long", timeStyle: "short" });
@@ -50,10 +60,11 @@ export default async function Transparencia({ searchParams }: PageProps<"/transp
     <div className="min-h-dvh">
       <header className="bg-marca-800 px-4 pt-6 pb-8 text-marca-50 sm:px-6">
         <div className="mx-auto max-w-3xl">
-          <p className="font-semibold text-marca-100">JAC Arango · Acueducto veredal · Concepción, Antioquia</p>
-          <h1 className="mt-2 text-[2rem] leading-tight font-bold text-white">Cuentas claras del acueducto</h1>
+          <p className="font-semibold text-marca-100">JAC Arango · Vereda Arango · Concepción, Antioquia</p>
+          <h1 className="mt-2 text-[2rem] leading-tight font-bold text-white">Cuentas claras</h1>
           <p className="mt-2 text-lg text-marca-100">
-            La plata del acueducto es de todos. Aquí se publica, en tiempo real, cuánto hay, cuánto entra y en qué se gasta.
+            La plata del acueducto{hayJunta ? " y de la Junta" : ""} es de todos. Aquí se publica, en tiempo real, cuánto hay, cuánto
+            entra y en qué se gasta.
           </p>
         </div>
       </header>
@@ -61,27 +72,36 @@ export default async function Transparencia({ searchParams }: PageProps<"/transp
       <main className="mx-auto -mt-4 max-w-3xl space-y-8 px-4 pb-16 sm:px-6">
         <ConsultaEstado />
 
-        <section className="tarjeta zocalo zocalo-agua" aria-labelledby="saldo">
-          <h2 id="saldo" className="text-lg font-bold">Dinero disponible hoy</h2>
-          <p className="num mt-1 text-[2.5rem] leading-tight font-bold text-stone-900">{pesos(saldoTotal)}</p>
-          {cuentas.length > 0 && (
-            <ul className="mt-3 space-y-1.5 border-t border-stone-200 pt-3 pb-2">
-              {cuentas.map((c) => (
-                <li key={c.id} className="flex items-center justify-between gap-3 text-stone-700">
-                  <span className="flex min-w-0 items-start gap-2">
-                    <Landmark className="mt-1 size-4 shrink-0 text-stone-500" aria-hidden />
-                    <span>
-                      {c.nombre}
-                      {c.ultimosDigitos && <span className="num whitespace-nowrap text-stone-500"> (termina en {c.ultimosDigitos})</span>}
-                    </span>
-                  </span>
-                  <span className="num font-semibold">{pesos(c.saldo)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-          <p className="text-sm text-stone-600">Actualizado: {ahora}</p>
+        <section aria-labelledby="saldo">
+          <h2 id="saldo" className="mb-3 text-lg font-bold">Dinero disponible hoy</h2>
+          <div className={`grid gap-4 ${fondos.length > 1 ? "sm:grid-cols-2" : ""}`}>
+            {fondos.map((x) => (
+              <div key={x.f} className={`tarjeta zocalo ${x.f === "acueducto" ? "zocalo-agua" : "zocalo-muro"}`}>
+                <h3 className="font-bold text-stone-700">{x.f === "acueducto" ? "Acueducto" : "Junta de Acción Comunal"}</h3>
+                <p className="num mt-1 text-[2.2rem] leading-tight font-bold text-stone-900">{pesos(x.saldo)}</p>
+                {x.cuentas.length > 0 && (
+                  <ul className="mt-3 space-y-1.5 border-t border-stone-200 pt-3 pb-2">
+                    {x.cuentas.map((c) => (
+                      <li key={c.id} className="flex items-center justify-between gap-3 text-stone-700">
+                        <span className="flex min-w-0 items-start gap-2">
+                          <Landmark className="mt-1 size-4 shrink-0 text-stone-500" aria-hidden />
+                          <span>
+                            {c.nombre}
+                            {c.ultimosDigitos && <span className="num whitespace-nowrap text-stone-500"> (termina en {c.ultimosDigitos})</span>}
+                          </span>
+                        </span>
+                        <span className="num font-semibold">{pesos(c.saldo)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-sm text-stone-600">Actualizado: {ahora} · Son plata separada: la del acueducto solo se usa en el acueducto.</p>
         </section>
+
+        <h2 className="border-t border-stone-200 pt-6 text-xl font-bold">El acueducto</h2>
 
         <section className="tarjeta" aria-labelledby="mes">
           <h2 id="mes" className="text-lg font-bold">Recaudo de {mes}</h2>
@@ -129,7 +149,21 @@ export default async function Transparencia({ searchParams }: PageProps<"/transp
         </section>
 
         <section aria-labelledby="movimientos">
-          <h2 id="movimientos" className="text-lg font-bold">Movimientos de la cuenta</h2>
+          <h2 id="movimientos" className="text-lg font-bold">Movimientos</h2>
+          {hayJunta && (
+            <nav className="my-3 grid grid-cols-2 gap-1 rounded-xl bg-stone-200 p-1" aria-label="Fondo">
+              {fondos.map((x) => (
+                <Link
+                  key={x.f}
+                  href={`/transparencia?fondo=${x.f}#movimientos`}
+                  aria-current={x.f === fondo ? "page" : undefined}
+                  className={`flex min-h-12 items-center justify-center rounded-lg font-semibold ${x.f === fondo ? "bg-white text-marca-900 shadow-sm" : "text-stone-700"}`}
+                >
+                  {x.f === "acueducto" ? "Acueducto" : "Junta"}
+                </Link>
+              ))}
+            </nav>
+          )}
           <p className="mt-1 mb-3 text-stone-700">
             Cada ingreso y gasto, con el cargo de quien lo registró y lo aprobó, y la foto de su soporte.
             {porAprobar > 0 && (
@@ -149,9 +183,9 @@ export default async function Transparencia({ searchParams }: PageProps<"/transp
           )}
           {paginas > 1 && (
             <nav className="mt-4 flex items-center justify-center gap-3" aria-label="Páginas">
-              {pagina > 1 && <Link className="btn-secundario" href={`/transparencia?pagina=${pagina - 1}`}>Más recientes</Link>}
+              {pagina > 1 && <Link className="btn-secundario" href={`/transparencia?fondo=${fondo}&pagina=${pagina - 1}#movimientos`}>Más recientes</Link>}
               <span className="num text-stone-700">Página {pagina} de {paginas}</span>
-              {pagina < paginas && <Link className="btn-secundario" href={`/transparencia?pagina=${pagina + 1}`}>Anteriores</Link>}
+              {pagina < paginas && <Link className="btn-secundario" href={`/transparencia?fondo=${fondo}&pagina=${pagina + 1}#movimientos`}>Anteriores</Link>}
             </nav>
           )}
         </section>
@@ -160,7 +194,7 @@ export default async function Transparencia({ searchParams }: PageProps<"/transp
           <h2 id="compartir" className="mb-3 text-lg font-bold">Compartir con los vecinos</h2>
           <BotonesCompartir
             url={url}
-            mensaje={`Cuentas claras del acueducto de la vereda Arango: saldo, gastos con facturas y consulta del estado de cuenta con la cédula. ${url}`}
+            mensaje={`Cuentas claras de la vereda Arango: saldo del acueducto y de la Junta, gastos con facturas y consulta del estado de cuenta con la cédula. ${url}`}
           />
         </section>
 

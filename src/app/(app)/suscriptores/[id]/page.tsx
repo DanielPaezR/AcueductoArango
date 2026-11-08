@@ -20,7 +20,7 @@ export default async function Suscriptor({ params }: PageProps<"/suscriptores/[i
   const [cargos, pagos, cuentas, tarifa, viv] = await Promise.all([
     db.select().from(schema.cargos).where(eq(schema.cargos.suscriptorId, id)),
     db.select().from(schema.pagos).where(eq(schema.pagos.suscriptorId, id)),
-    cuentasConSaldo(true),
+    cuentasConSaldo(true, "acueducto"),
     tarifaVigente(),
     db.query.viviendas.findFirst({ where: and(eq(schema.viviendas.id, e.viviendaId)), columns: { codigo: true, referencia: true, nombrePredio: true } }),
   ]);
@@ -98,7 +98,7 @@ export default async function Suscriptor({ params }: PageProps<"/suscriptores/[i
               hoy={hoyBogota()}
             />
           ) : (
-            <p className="text-stone-700">Primero cree la cuenta del banco en Tesorería.</p>
+            <p className="text-stone-700">Primero cree la cuenta del acueducto en Tesorería.</p>
           )}
         </section>
       )}

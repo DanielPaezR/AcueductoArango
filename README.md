@@ -36,11 +36,11 @@ transparencia** donde cualquier persona ve las cuentas y cada suscriptor consult
 | Mantenimientos | `/mantenimientos` | Arreglos del fontanero: materiales, mano de obra, factura, fotos antes/después; actualiza el estado de la red y envía la factura a tesorería. |
 | Suscriptores | `/suscriptores` | Se crean desde el censo; estado de cuenta, pagos, recibos, cobros extra, suspensión. |
 | Cobros del mes | `/facturacion` | Tarifa con historial, generación de la mensualidad, cartera, cuentas de cobro imprimibles. |
-| Tesorería | `/tesoreria` | Cuentas, ingresos y gastos con soporte, **aprobación de la presidencia**, anulaciones visibles. |
+| Tesorería | `/tesoreria` | Dos fondos separados (**Acueducto** y **Junta**), cada uno con sus cuentas y categorías; ingresos y gastos con soporte, **aprobación de la presidencia**, anulaciones visibles. Los pagos de suscriptores y facturas de arreglos solo van a cuentas del acueducto. |
 | Ayudas y proyectos | `/ayudas` | Proyectos y beneficiarios por casa. |
 | Reportes | `/reportes` | Población por edades y sectores, 6 reportes en Excel, respaldo completo (superadmin). |
 | Usuarios / Bitácora | `/usuarios`, `/bitacora` | Gestión de usuarios y permisos; registro inmodificable de todas las acciones. |
-| Página pública | `/transparencia` | Saldo en tiempo real, recaudo, pagos agregados (sin nombres), movimientos con soportes, consulta por cédula, compartir por WhatsApp/QR. |
+| Página pública | `/transparencia` | Saldo del acueducto y de la Junta en tiempo real (separados), recaudo, pagos agregados (sin nombres), movimientos con soportes, consulta por cédula, compartir por WhatsApp/QR. |
 
 **Modo sin señal.** Viviendas, puntos de la red, tuberías y arreglos se guardan en el celular y se suben solos
 al volver la conexión (pantalla *Pendientes*). Requisito: abrir la app **con señal y sesión iniciada** al menos

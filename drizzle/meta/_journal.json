@@ -50,6 +50,13 @@
       "when": 1794156410287,
       "tag": "0006_legal",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794161975042,
+      "tag": "0007_fondos",
+      "breakpoints": true
     }
   ]
 }

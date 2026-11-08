@@ -184,6 +184,9 @@ export async function registrarPago(_: Estado, form: FormData): Promise<Estado> 
   if (!p.success) return { error: p.error.issues[0].message };
   const valor = leerPesos(form.get("valor"));
   if (!Number.isFinite(valor) || valor <= 0) return { error: "Escriba el valor pagado" };
+  const cuenta = await db.query.cuentas.findFirst({ where: eq(schema.cuentas.id, p.data.cuentaId) });
+  if (!cuenta || !cuenta.activa || cuenta.fondo !== "acueducto")
+    return { error: "Los pagos del acueducto solo pueden entrar a una cuenta activa del acueducto" };
   const yo = await db.query.usuarios.findFirst({ where: eq(schema.usuarios.id, u.id), columns: { cargo: true, rol: true } });
   const cargo = yo?.cargo || ROLES[(yo?.rol ?? "admin") as Rol];
 

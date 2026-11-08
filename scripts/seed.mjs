@@ -44,7 +44,7 @@ if (reset) {
     );
     if (r.rowCount) {
       await pool.query(
-        `insert into auditoria (usuario_id, accion, entidad, entidad_id, datos) values ($1, 'restablecer_password', 'usuario', $1, '{"medio":"variable RESET_SUPERADMIN_PASSWORD"}')`,
+        `insert into auditoria (usuario_id, accion, entidad, entidad_id, datos) values ($1::uuid, 'restablecer_password', 'usuario', $1::text, '{"medio":"variable RESET_SUPERADMIN_PASSWORD"}')`,
         [r.rows[0].id],
       );
       console.log(`✓ Clave del superadmin "${username}" restablecida. BORRE la variable RESET_SUPERADMIN_PASSWORD.`);

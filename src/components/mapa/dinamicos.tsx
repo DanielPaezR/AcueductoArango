@@ -7,3 +7,4 @@ const Cargando = () => <div className="flex h-64 items-center justify-center rou
 export const MapaSelector = dynamic(() => import("./selector"), { ssr: false, loading: Cargando });
 export const MapaPunto = dynamic(() => import("./punto"), { ssr: false, loading: Cargando });
 export const MapaUsuarios = dynamic(() => import("./usuarios"), { ssr: false, loading: Cargando });
+export const MapaRed = dynamic(() => import("./red"), { ssr: false, loading: Cargando });

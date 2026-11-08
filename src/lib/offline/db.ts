@@ -13,6 +13,18 @@ export type ViviendaPendiente = {
   error?: string;
 };
 
+/** Otros registros de campo (red del acueducto y mantenimientos) esperando subir. */
+export type TipoOperacion = "elemento" | "tramo" | "mantenimiento";
+export type OperacionPendiente = {
+  id: string; // = id del registro
+  tipo: TipoOperacion;
+  payload: unknown;
+  etiqueta: string;
+  guardadoEn: number;
+  intentos: number;
+  error?: string;
+};
+
 export type FotoPendiente = {
   id: string; // = id del adjunto
   entidad: string;
@@ -27,6 +39,7 @@ export type FotoPendiente = {
 class VeredaDB extends Dexie {
   viviendas!: Table<ViviendaPendiente, string>;
   fotos!: Table<FotoPendiente, string>;
+  operaciones!: Table<OperacionPendiente, string>;
   cache!: Table<{ clave: string; valor: unknown }, string>;
   constructor() {
     super("vereda");
@@ -34,6 +47,12 @@ class VeredaDB extends Dexie {
       viviendas: "id, guardadoEn",
       fotos: "id, entidadId, guardadoEn",
       cache: "clave",
+    });
+    this.version(2).stores({
+      viviendas: "id, guardadoEn",
+      fotos: "id, entidadId, guardadoEn",
+      cache: "clave",
+      operaciones: "id, tipo, guardadoEn",
     });
   }
 }

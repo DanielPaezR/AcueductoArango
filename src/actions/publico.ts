@@ -1,12 +1,11 @@
 "use server";
 
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { headers } from "next/headers";
-import { db, schema } from "@/db";
+import { db } from "@/db";
 import { auditar } from "@/lib/auditoria";
 import { estadoSuscriptores } from "@/lib/finanzas";
 
-const { personas: P, suscriptores: S } = schema;
 
 /* Límite simple en memoria: 8 consultas por conexión cada 10 minutos (una sola instancia en Railway). */
 const VENTANA_MS = 10 * 60 * 1000;
@@ -57,19 +56,18 @@ export async function consultarEstado(_: ResultadoConsulta | undefined, form: Fo
   const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "local";
   if (!permitido(ip)) return { error: "Hizo muchas consultas seguidas. Espere unos minutos e intente de nuevo." };
 
-  // Suscriptores donde esa cédula es la del titular o la de la cabeza de familia de la vivienda
-  const ids = await db
-    .selectDistinct({ id: S.id })
-    .from(S)
-    .innerJoin(P, eq(P.viviendaId, S.viviendaId))
-    .where(
-      and(
-        isNull(S.deletedAt),
-        isNull(P.deletedAt),
-        sql`regexp_replace(coalesce(${P.numeroDocumento}, ''), '\\D', '', 'g') = ${cedula}`,
-        sql`(${S.titularPersonaId} = ${P.id} or ${P.esJefeHogar})`,
-      ),
-    );
+  // Suscriptores donde esa cédula es la del titular, la de la cabeza de familia,
+  // o la del dueño de la matrícula de una casa alquilada
+  const ids = (
+    await db.execute<{ id: string }>(sql`
+      select distinct s.id from suscriptores s
+      join viviendas v on v.id = s.vivienda_id and v.deleted_at is null
+      left join personas p on p.vivienda_id = s.vivienda_id and p.deleted_at is null
+        and (s.titular_persona_id = p.id or p.es_jefe_hogar)
+        and regexp_replace(coalesce(p.numero_documento, ''), '\D', '', 'g') = ${cedula}
+      where s.deleted_at is null
+        and (p.id is not null or regexp_replace(coalesce(v.titular_matricula_documento, ''), '\D', '', 'g') = ${cedula})`)
+  ).rows;
 
   await auditar(null, "consulta_publica", "estado_cuenta", null, { encontrados: ids.length });
   if (!ids.length)

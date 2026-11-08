@@ -1,4 +1,6 @@
-import { Map, Plus } from "lucide-react";
+import { sql } from "drizzle-orm";
+import { Droplets, Map, Plus, Wrench } from "lucide-react";
+import { db, schema } from "@/db";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FilaVivienda } from "@/components/fila-vivienda";
@@ -19,6 +21,19 @@ export default async function Inicio() {
   if (u.debeCambiarPassword) redirect("/cuenta?primera=1");
   const verCenso = puede(u, "censo", "ver");
   const r = verCenso ? await resumenInicio() : null;
+  const verRed = puede(u, "acueducto_red", "ver");
+  const verArreglos = puede(u, "mantenimientos", "ver");
+  const arreglos = verArreglos
+    ? (
+        await db
+          .select({
+            abiertos: sql<number>`count(*) filter (where ${schema.mantenimientos.estado} in ('reportado','en_proceso'))::int`,
+            urgentes: sql<number>`count(*) filter (where ${schema.mantenimientos.estado} in ('reportado','en_proceso') and ${schema.mantenimientos.prioridad} = 'alta')::int`,
+          })
+          .from(schema.mantenimientos)
+          .where(sql`${schema.mantenimientos.deletedAt} is null`)
+      )[0]
+    : null;
 
   const pctAgua = r ? Math.min(100, (r.conAcueducto / META_VIVIENDAS) * 100) : 0;
   const pctOtras = r ? Math.min(100 - pctAgua, ((r.viviendas - r.conAcueducto) / META_VIVIENDAS) * 100) : 0;
@@ -47,6 +62,52 @@ export default async function Inicio() {
             </Link>
           )}
         </div>
+      )}
+
+      {(verRed || verArreglos) && (
+        <section className="tarjeta" aria-labelledby="acueducto">
+          <h2 id="acueducto" className="flex items-center gap-2 text-lg font-bold">
+            <Droplets className="size-5 text-postigo-700" aria-hidden />
+            Acueducto
+          </h2>
+          {arreglos && (
+            <p className="mt-1 text-[1.05rem] text-stone-700">
+              {arreglos.abiertos ? (
+                <>
+                  Hay <strong className="num text-stone-900">{arreglos.abiertos}</strong> arreglo{arreglos.abiertos === 1 ? "" : "s"} pendiente
+                  {arreglos.abiertos === 1 ? "" : "s"}
+                  {arreglos.urgentes > 0 && (
+                    <>
+                      , <strong className="num text-teja-700">{arreglos.urgentes}</strong> con prioridad alta
+                    </>
+                  )}
+                  .
+                </>
+              ) : (
+                "No hay arreglos pendientes."
+              )}
+            </p>
+          )}
+          <div className="mt-4 grid gap-2 sm:grid-cols-3">
+            {puede(u, "mantenimientos", "crear") && (
+              <Link href="/mantenimientos/nuevo" className="btn-primario">
+                <Wrench className="size-5" aria-hidden />
+                Registrar arreglo
+              </Link>
+            )}
+            {verArreglos && (
+              <Link href="/mantenimientos" className="btn-secundario">
+                Ver pendientes
+              </Link>
+            )}
+            {verRed && (
+              <Link href="/acueducto" className="btn-secundario">
+                <Map className="size-5" aria-hidden />
+                Mapa de la red
+              </Link>
+            )}
+          </div>
+        </section>
       )}
 
       {r && (

@@ -1,17 +1,18 @@
 "use client";
 
 import { useLiveQuery } from "dexie-react-hooks";
-import { Camera, CircleCheck, House, TriangleAlert } from "lucide-react";
+import { Camera, CircleCheck, Droplets, House, TriangleAlert, Wrench } from "lucide-react";
 import { BotonSincronizar } from "@/components/sync-status";
 import { dbLocal } from "@/lib/offline/db";
 
 export function Pendientes() {
   const viv = useLiveQuery(() => dbLocal.viviendas.orderBy("guardadoEn").toArray(), []);
   const fotos = useLiveQuery(() => dbLocal.fotos.orderBy("guardadoEn").toArray(), []);
+  const ops = useLiveQuery(() => dbLocal.operaciones.orderBy("guardadoEn").toArray(), []);
 
-  if (!viv || !fotos) return <div className="tarjeta text-stone-600">Cargando…</div>;
+  if (!viv || !fotos || !ops) return <div className="tarjeta text-stone-600">Cargando…</div>;
 
-  if (!viv.length && !fotos.length)
+  if (!viv.length && !fotos.length && !ops.length)
     return (
       <div className="tarjeta flex items-center gap-3 text-lg text-stone-700">
         <CircleCheck className="size-7 shrink-0 text-marca-700" aria-hidden />
@@ -37,6 +38,27 @@ export function Pendientes() {
             <p className="mt-2 flex gap-1.5 text-teja-700">
               <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
               Último intento: {p.error}
+            </p>
+          )}
+        </div>
+      ))}
+      {ops.map((o) => (
+        <div key={o.id} className="zocalo zocalo-pendiente rounded-xl border border-stone-200 bg-white p-4 pb-5">
+          <div className="flex items-center gap-2 font-bold">
+            {o.tipo === "mantenimiento" ? (
+              <Wrench className="size-5 text-stone-500" aria-hidden />
+            ) : (
+              <Droplets className="size-5 text-stone-500" aria-hidden />
+            )}
+            {o.etiqueta}
+          </div>
+          <div className="mt-0.5 text-stone-600">
+            Guardado el <span className="num">{new Date(o.guardadoEn).toLocaleString("es-CO")}</span>
+          </div>
+          {o.error && (
+            <p className="mt-2 flex gap-1.5 text-teja-700">
+              <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+              Último intento: {o.error}
             </p>
           )}
         </div>

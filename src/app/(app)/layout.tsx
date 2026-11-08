@@ -10,7 +10,13 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     <Shell
       items={items}
       faseActual={FASE_ACTUAL}
-      puedeRegistrar={puede(u, "censo", "crear")}
+      accionPrincipal={
+        puede(u, "censo", "crear")
+          ? { href: "/viviendas/nueva", label: "Registrar" }
+          : puede(u, "mantenimientos", "crear")
+            ? { href: "/mantenimientos/nuevo", label: "Arreglo" }
+            : null
+      }
       usuario={{ nombre: u.nombre, rolLabel: ROLES[u.rol as Rol] }}
     >
       {children}

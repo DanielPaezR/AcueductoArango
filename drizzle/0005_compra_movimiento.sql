@@ -1,0 +1,1 @@
+ALTER TABLE "compras" ADD COLUMN "movimiento_id" uuid;

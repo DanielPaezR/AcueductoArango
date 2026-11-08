@@ -2,7 +2,7 @@
 
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Circle, MapContainer, Marker, useMap, useMapEvents } from "react-leaflet";
 import { CENTRO_MUNICIPIO } from "@/lib/opciones";
 import { CapasBase } from "./capas";
@@ -38,11 +38,18 @@ export default function MapaSelector({
   pos,
   precision,
   onChange,
+  iconoHtml,
 }: {
   pos: [number, number] | null;
   precision?: number | null;
   onChange: (p: [number, number]) => void;
+  /** SVG del marcador; por defecto, la casa. */
+  iconoHtml?: string;
 }) {
+  const icono = useMemo(
+    () => (iconoHtml ? L.divIcon({ className: "", html: iconoHtml, iconSize: [30, 30], iconAnchor: [15, 15] }) : iconoCasa),
+    [iconoHtml],
+  );
   return (
     <MapContainer center={pos ?? CENTRO_MUNICIPIO} zoom={pos ? 18 : 14} className="h-72 w-full rounded-lg" scrollWheelZoom>
       <CapasBase />
@@ -53,7 +60,7 @@ export default function MapaSelector({
           {precision ? <Circle center={pos} radius={precision} pathOptions={{ color: "#1f6698", weight: 1.5, fillOpacity: 0.12 }} /> : null}
           <Marker
             position={pos}
-            icon={iconoCasa}
+            icon={icono}
             draggable
             eventHandlers={{
               dragend: (e) => {

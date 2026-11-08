@@ -22,8 +22,8 @@ export const NAV: ItemNav[] = [
   { href: "/mapa", label: "Mapa de la vereda", icono: "mapa", seccion: "mapa_usuarios", fase: 1 },
   { href: "/viviendas", label: "Viviendas", icono: "viviendas", seccion: "censo", fase: 1 },
   { href: "/ayudas", label: "Ayudas y proyectos", icono: "ayudas", seccion: "ayudas", fase: 4 },
-  { href: "/acueducto", label: "Red del acueducto", icono: "acueducto", seccion: "acueducto_red", fase: 2 },
-  { href: "/mantenimientos", label: "Mantenimientos", icono: "mantenimientos", seccion: "mantenimientos", fase: 2 },
+  { href: "/acueducto", label: "Red del acueducto", icono: "acueducto", seccion: "acueducto_red", },
+  { href: "/mantenimientos", label: "Mantenimientos", icono: "mantenimientos", seccion: "mantenimientos", },
   { href: "/suscriptores", label: "Suscriptores", icono: "suscriptores", seccion: "suscriptores" },
   { href: "/facturacion", label: "Cobros del mes", icono: "facturacion", seccion: "facturacion" },
   { href: "/tesoreria", label: "Tesorería", icono: "tesoreria", seccion: "tesoreria" },
@@ -33,4 +33,4 @@ export const NAV: ItemNav[] = [
 ];
 
 /** Fase hasta la que ya hay pantallas construidas. */
-export const FASE_ACTUAL = 1;
+export const FASE_ACTUAL = 3;

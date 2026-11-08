@@ -26,13 +26,14 @@ function Marca({ className = "" }: { className?: string }) {
 export function Shell({
   items,
   faseActual,
-  puedeRegistrar,
+  accionPrincipal,
   usuario,
   children,
 }: {
   items: ItemNav[];
   faseActual: number;
-  puedeRegistrar: boolean;
+  /** Botón central de la barra inferior según lo que más hace este usuario en campo. */
+  accionPrincipal: { href: string; label: string } | null;
   usuario: { nombre: string; rolLabel: string };
   children: React.ReactNode;
 }) {
@@ -103,7 +104,12 @@ export function Shell({
   );
 
   // Barra inferior del celular: las tareas de campo, al alcance del pulgar
-  const tabs = items.filter((i) => ["/", "/mapa", "/viviendas"].includes(i.href) && disponible(i));
+  const preferidas = ["/", "/mapa", "/viviendas", "/acueducto", "/mantenimientos"];
+  const tabs = preferidas
+    .map((h) => items.find((i) => i.href === h && disponible(i)))
+    .filter((i): i is ItemNav => Boolean(i))
+    .slice(0, accionPrincipal ? 3 : 4);
+  const CORTO: Record<string, string> = { "/mapa": "Mapa", "/acueducto": "Red", "/mantenimientos": "Arreglos" };
 
   return (
     <div className="flex min-h-dvh">
@@ -168,24 +174,24 @@ export function Shell({
                   }`}
                 >
                   <Icono className="size-6" aria-hidden />
-                  {i.href === "/mapa" ? "Mapa" : i.label}
+                  {CORTO[i.href] ?? i.label}
                 </Link>
               );
             })}
-            {puedeRegistrar && (
+            {accionPrincipal && (
               <Link
-                href="/viviendas/nueva"
+                href={accionPrincipal.href}
                 className="flex min-h-16 flex-1 flex-col items-center justify-center gap-0.5 text-[0.78rem] font-semibold text-marca-800"
               >
                 <span className="-mt-5 flex size-12 items-center justify-center rounded-full bg-marca-700 text-white shadow-[0_3px_8px_rgb(18_56_38/0.35)] ring-4 ring-white">
                   <Plus className="size-6" aria-hidden />
                 </span>
-                Registrar
+                {accionPrincipal.label}
               </Link>
             )}
             {tabs.slice(2).map((i) => {
               const Icono = ICONOS[i.icono];
-              const a = activo(i.href) && path !== "/viviendas/nueva";
+              const a = activo(i.href) && path !== accionPrincipal?.href;
               return (
                 <Link
                   key={i.href}
@@ -196,7 +202,7 @@ export function Shell({
                   }`}
                 >
                   <Icono className="size-6" aria-hidden />
-                  {i.label}
+                  {CORTO[i.href] ?? i.label}
                 </Link>
               );
             })}

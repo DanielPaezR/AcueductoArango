@@ -132,6 +132,7 @@ export default async function FichaVivienda({ params }: PageProps<"/viviendas/[i
                 <Dato l="Matrícula del derecho" v={siNo(v.tieneMatricula) ?? "Sin dato"} />
                 <Dato l="Número de matrícula" v={v.numeroMatricula && <span className="num">{v.numeroMatricula}</span>} />
                 <Dato l="Titular (casa alquilada)" v={v.titularMatriculaNombre} />
+                <Dato l="Cédula del titular" v={v.titularMatriculaDocumento && <span className="num">{v.titularMatriculaDocumento}</span>} />
                 <Dato
                   l="Teléfono del titular"
                   v={

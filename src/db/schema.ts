@@ -131,6 +131,7 @@ export const viviendas = pgTable(
     tieneMatricula: boolean("tiene_matricula"),
     numeroMatricula: varchar("numero_matricula", { length: 30 }),
     titularMatriculaNombre: varchar("titular_matricula_nombre", { length: 160 }), // si la casa está alquilada
+    titularMatriculaDocumento: varchar("titular_matricula_documento", { length: 30 }),
     titularMatriculaTelefono: varchar("titular_matricula_telefono", { length: 30 }),
 
     // Habeas Data (Ley 1581 de 2012)
@@ -312,6 +313,8 @@ export const compras = pgTable("compras", {
   fecha: date("fecha").notNull(),
   total: numeric("total", { precision: 14, scale: 2 }).notNull(),
   observaciones: text("observaciones"),
+  /** Movimiento de tesorería creado a partir de esta compra (para no duplicarlo). */
+  movimientoId: uuid("movimiento_id"),
   createdBy: uuid("created_by").references(() => usuarios.id),
   ...timestamps,
   ...softDelete,

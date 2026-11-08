@@ -49,6 +49,7 @@ export default async function EditarVivienda({ params }: PageProps<"/viviendas/[
             tieneMatricula: v.tieneMatricula,
             numeroMatricula: v.numeroMatricula,
             titularMatriculaNombre: v.titularMatriculaNombre,
+            titularMatriculaDocumento: v.titularMatriculaDocumento,
             titularMatriculaTelefono: v.titularMatriculaTelefono,
             autorizacionDatos: v.autorizacionDatos,
             autorizacionNombre: v.autorizacionNombre,

@@ -29,6 +29,20 @@
       "when": 1794151623065,
       "tag": "0003_tesoreria",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794153267600,
+      "tag": "0004_cedula_titular",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794153626195,
+      "tag": "0005_compra_movimiento",
+      "breakpoints": true
     }
   ]
 }

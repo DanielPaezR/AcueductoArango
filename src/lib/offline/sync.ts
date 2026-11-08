@@ -37,7 +37,35 @@ async function ejecutar(): Promise<ResultadoSync> {
     }
   }
 
-  const pendientesViv = new Set(await dbLocal.viviendas.toCollection().primaryKeys());
+  // Red del acueducto y mantenimientos: primero puntos y tuberías, luego arreglos que los referencian
+  const orden = { elemento: 0, tramo: 1, mantenimiento: 2 } as const;
+  const ops = (await dbLocal.operaciones.toArray()).sort(
+    (a, b) => orden[a.tipo] - orden[b.tipo] || a.guardadoEn - b.guardadoEn,
+  );
+  for (const op of ops) {
+    try {
+      const res = await fetch(`/api/sync/${op.tipo}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(op.payload),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (res.status === 401) return { ...r, sesionVencida: true, ultimoError: body.error };
+      if (!res.ok || !body.ok) throw new Error(body.error ?? `Error ${res.status}`);
+      await dbLocal.operaciones.delete(op.id);
+      r.subidas++;
+    } catch (e) {
+      r.fallidas++;
+      r.ultimoError = (e as Error).message;
+      await dbLocal.operaciones.update(op.id, { intentos: op.intentos + 1, error: r.ultimoError });
+      if (e instanceof TypeError) return r;
+    }
+  }
+
+  const pendientesViv = new Set([
+    ...(await dbLocal.viviendas.toCollection().primaryKeys()),
+    ...(await dbLocal.operaciones.toCollection().primaryKeys()),
+  ]);
   for (const f of await dbLocal.fotos.orderBy("guardadoEn").toArray()) {
     if (pendientesViv.has(f.entidadId)) continue; // primero debe subir la vivienda
     try {
@@ -79,4 +107,29 @@ export async function comprimirImagen(archivo: File, maxLado = 1600, calidad = 0
   } catch {
     return archivo;
   }
+}
+
+/** Guarda un registro de campo en el teléfono (con sus fotos) e intenta subirlo. Devuelve true si ya quedó en el servidor. */
+export async function guardarOperacion(
+  op: { id: string; tipo: import("./db").TipoOperacion; payload: unknown; etiqueta: string },
+  fotos: { id: string; blob: Blob; tipo?: string }[] = [],
+): Promise<{ subido: boolean; error?: string }> {
+  await dbLocal.transaction("rw", dbLocal.operaciones, dbLocal.fotos, async () => {
+    await dbLocal.operaciones.put({ ...op, guardadoEn: Date.now(), intentos: 0 });
+    for (const f of fotos)
+      await dbLocal.fotos.put({
+        id: f.id,
+        entidad: op.tipo,
+        entidadId: op.id,
+        tipo: f.tipo ?? "foto",
+        blob: f.blob,
+        guardadoEn: Date.now(),
+        intentos: 0,
+      });
+  });
+  if (!navigator.onLine) return { subido: false };
+  await sincronizar();
+  const sigue = await dbLocal.operaciones.get(op.id);
+  if (!sigue) return { subido: true };
+  return { subido: false, error: sigue.error && !/fetch|network/i.test(sigue.error) ? sigue.error : undefined };
 }

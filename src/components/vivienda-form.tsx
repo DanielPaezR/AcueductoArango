@@ -1,9 +1,10 @@
 "use client";
 
-import { Camera, Droplets, House, MapPin, Plus, Signature, Smartphone, UserRound, UsersRound, X, type LucideIcon } from "lucide-react";
+import { Camera, Droplets, House, MapPin, Plus, Signature, Smartphone, UserRound, UsersRound, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { Campo, Opciones, Seccion, Select, SiNo, useGps } from "@/components/campos";
 import { MapaSelector } from "@/components/mapa/dinamicos";
 import { dbLocal } from "@/lib/offline/db";
 import { comprimirImagen, sincronizar } from "@/lib/offline/sync";
@@ -42,126 +43,6 @@ const viviendaVacia = (): Vivienda => ({
   estado: "habitada",
 });
 
-/* ---------- pequeños componentes de campo ---------- */
-
-function Campo({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
-  return (
-    <div className={className}>
-      <label className="label">{label}</label>
-      {children}
-    </div>
-  );
-}
-
-function Select({
-  value,
-  onChange,
-  opciones,
-}: {
-  value: string | null | undefined;
-  onChange: (v: string | null) => void;
-  opciones: readonly string[];
-}) {
-  return (
-    <select className="input" value={value ?? ""} onChange={(e) => onChange(e.target.value || null)}>
-      <option value="">—</option>
-      {opciones.map((o) => (
-        <option key={o} value={o}>{o}</option>
-      ))}
-    </select>
-  );
-}
-
-function SiNo({ value, onChange }: { value: boolean | null | undefined; onChange: (v: boolean | null) => void }) {
-  return (
-    <div className="flex gap-1">
-      {([
-        [true, "Sí"],
-        [false, "No"],
-      ] as const).map(([v, l]) => (
-        <button
-          type="button"
-          key={l}
-          onClick={() => onChange(value === v ? null : v)}
-          className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${
-            value === v ? "border-marca-700 bg-marca-700 text-white" : "border-stone-300 bg-white text-stone-700"
-          }`}
-        >
-          {l}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function Seccion({ titulo, icono: Icono, children }: { titulo: string; icono: LucideIcon; children: React.ReactNode }) {
-  return (
-    <section className="tarjeta space-y-3">
-      <h2 className="flex items-center gap-2 text-lg font-bold text-stone-900">
-        <Icono className="size-5 text-marca-700" aria-hidden />
-        {titulo}
-      </h2>
-      {children}
-    </section>
-  );
-}
-
-/* ---------- GPS ---------- */
-
-function useGps() {
-  const [estado, setEstado] = useState<"inactivo" | "buscando" | "listo" | "error">("inactivo");
-  const [lectura, setLectura] = useState<GeolocationPosition | null>(null);
-  const [error, setError] = useState<string>();
-  const watch = useRef<number | null>(null);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const detener = () => {
-    if (watch.current !== null) navigator.geolocation.clearWatch(watch.current);
-    if (timer.current) clearTimeout(timer.current);
-    watch.current = null;
-  };
-
-  /** Escucha el GPS hasta 30 s (o hasta tener ≤ 6 m) y se queda con la lectura más precisa. */
-  const iniciar = (onMejor: (p: GeolocationPosition) => void) => {
-    if (!("geolocation" in navigator)) {
-      setEstado("error");
-      setError("Este dispositivo no tiene GPS disponible");
-      return;
-    }
-    detener();
-    setEstado("buscando");
-    setError(undefined);
-    let mejor: GeolocationPosition | null = null;
-    watch.current = navigator.geolocation.watchPosition(
-      (p) => {
-        if (!mejor || p.coords.accuracy < mejor.coords.accuracy) {
-          mejor = p;
-          setLectura(p);
-          onMejor(p);
-        }
-        if (p.coords.accuracy <= 6) {
-          detener();
-          setEstado("listo");
-        }
-      },
-      (e) => {
-        detener();
-        setEstado(mejor ? "listo" : "error");
-        setError(e.code === 1 ? "Debe permitir el acceso a la ubicación en el navegador" : "No se pudo obtener la ubicación. Intente al aire libre.");
-      },
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 },
-    );
-    timer.current = setTimeout(() => {
-      detener();
-      setEstado(mejor ? "listo" : "error");
-      if (!mejor) setError("No se obtuvo señal GPS. Intente al aire libre.");
-    }, 30000);
-  };
-
-  useEffect(() => detener, []);
-  return { estado, lectura, error, iniciar, detener: () => (detener(), setEstado(lectura ? "listo" : "inactivo")) };
-}
-
 /* ---------- edad ---------- */
 
 /** Campo de edad: muestra la edad actual y, si se cambia, la guarda como "edad reportada hoy". */
@@ -184,33 +65,6 @@ function EdadInput({ p, onChange }: { p: PersonaInput; onChange: (p: PersonaInpu
         })
       }
     />
-  );
-}
-
-function Opciones({
-  value,
-  onChange,
-  opciones,
-}: {
-  value: string | null | undefined;
-  onChange: (v: string | null) => void;
-  opciones: readonly string[];
-}) {
-  return (
-    <div className="flex gap-1">
-      {opciones.map((o) => (
-        <button
-          type="button"
-          key={o}
-          onClick={() => onChange(value === o ? null : o)}
-          className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${
-            value === o ? "border-marca-700 bg-marca-700 text-white" : "border-stone-300 bg-white text-stone-700"
-          }`}
-        >
-          {o}
-        </button>
-      ))}
-    </div>
   );
 }
 
@@ -307,6 +161,7 @@ export function ViviendaForm({
       tieneMatricula: v.usaAcueducto ? v.tieneMatricula : null,
       numeroMatricula: v.usaAcueducto && v.tieneMatricula ? v.numeroMatricula : null,
       titularMatriculaNombre: v.usaAcueducto && alquilada ? v.titularMatriculaNombre : null,
+      titularMatriculaDocumento: v.usaAcueducto && alquilada ? v.titularMatriculaDocumento : null,
       titularMatriculaTelefono: v.usaAcueducto && alquilada ? v.titularMatriculaTelefono : null,
     };
 
@@ -529,13 +384,20 @@ export function ViviendaForm({
             )}
             {alquilada && (
               <div className="space-y-2 rounded-lg bg-ocre-50 p-3 ring-1 ring-ocre-100">
-                <p className="font-semibold text-ocre-800">12. Casa alquilada: titular de la matrícula</p>
+                <p className="font-semibold text-ocre-800">12. Casa alquilada: titular de la matrícula (nombre, cédula y teléfono)</p>
                 <input
                   className="input"
                   placeholder="Nombre del titular"
                   autoCapitalize="words"
                   value={v.titularMatriculaNombre ?? ""}
                   onChange={(e) => set("titularMatriculaNombre", e.target.value)}
+                />
+                <input
+                  className="input num"
+                  placeholder="Cédula del titular"
+                  inputMode="numeric"
+                  value={v.titularMatriculaDocumento ?? ""}
+                  onChange={(e) => set("titularMatriculaDocumento", e.target.value)}
                 />
                 <input
                   className="input"

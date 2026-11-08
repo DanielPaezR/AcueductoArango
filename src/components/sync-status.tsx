@@ -22,11 +22,16 @@ export function useEnLinea() {
 }
 
 export function usePendientes() {
-  return useLiveQuery(async () => (await dbLocal.viviendas.count()) + (await dbLocal.fotos.count()), []) ?? 0;
+  return (
+    useLiveQuery(
+      async () => (await dbLocal.viviendas.count()) + (await dbLocal.operaciones.count()) + (await dbLocal.fotos.count()),
+      [],
+    ) ?? 0
+  );
 }
 
 /** Páginas que se guardan en el teléfono para poder trabajar sin señal. */
-const PRECARGAR = ["/", "/viviendas/nueva", "/viviendas/pendientes"];
+const PRECARGAR = ["/", "/viviendas/nueva", "/viviendas/pendientes", "/acueducto/punto/nuevo", "/mantenimientos/nuevo"];
 
 /** Motor en segundo plano: registra el service worker y sube pendientes. Montar una sola vez. */
 export function SyncMotor() {

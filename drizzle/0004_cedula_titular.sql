@@ -1,0 +1,1 @@
+ALTER TABLE "viviendas" ADD COLUMN "titular_matricula_documento" varchar(30);

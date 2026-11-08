@@ -8,8 +8,8 @@ export async function usuarioApi(
   accion: Accion = "ver",
 ): Promise<UsuarioSesion | Response> {
   const u = await usuarioActual();
-  if (!u) return Response.json({ error: "Sesión vencida. Vuelve a ingresar." }, { status: 401 });
+  if (!u) return Response.json({ error: "Sesión vencida. Ingrese de nuevo." }, { status: 401 });
   if (seccion && !puede(u, seccion, accion))
-    return Response.json({ error: "No tienes permiso para esta acción" }, { status: 403 });
+    return Response.json({ error: "No tiene permiso para esta acción" }, { status: 403 });
   return u;
 }

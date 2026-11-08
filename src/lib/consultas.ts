@@ -48,6 +48,7 @@ export async function listarViviendas(f: { q?: string; sector?: number; acueduct
         referencia: V.referencia,
         nombrePredio: V.nombrePredio,
         usaAcueducto: V.usaAcueducto,
+        autorizacionDatos: V.autorizacionDatos,
         estado: V.estado,
         sector: S.nombre,
         jefe: jefeSql,
@@ -102,4 +103,40 @@ export async function obtenerVivienda(id: string) {
     v.createdBy ? db.query.usuarios.findFirst({ where: eq(schema.usuarios.id, v.createdBy), columns: { nombre: true } }) : null,
   ]);
   return { v, personas, adjuntos, sector, creador };
+}
+
+/** Resumen para la pantalla de inicio. */
+export async function resumenInicio() {
+  const [[t], recientes] = await Promise.all([
+    db
+      .select({
+        viviendas: sql<number>`count(*)::int`,
+        conAcueducto: sql<number>`count(*) filter (where ${V.usaAcueducto})::int`,
+        conMatricula: sql<number>`count(*) filter (where ${V.tieneMatricula})::int`,
+        sinAutorizacion: sql<number>`count(*) filter (where not ${V.autorizacionDatos} and exists (
+          select 1 from personas p where p.vivienda_id = viviendas.id and p.deleted_at is null))::int`,
+        personas: sql<number>`(select count(*)::int from personas p join viviendas v2 on v2.id = p.vivienda_id
+          where p.deleted_at is null and v2.deleted_at is null)`,
+      })
+      .from(V)
+      .where(isNull(V.deletedAt)),
+    db
+      .select({
+        id: V.id,
+        codigo: V.codigo,
+        referencia: V.referencia,
+        nombrePredio: V.nombrePredio,
+        usaAcueducto: V.usaAcueducto,
+        autorizacionDatos: V.autorizacionDatos,
+        estado: V.estado,
+        fotoPrincipalUrl: V.fotoPrincipalUrl,
+        jefe: jefeSql,
+        personas: numPersonasSql,
+      })
+      .from(V)
+      .where(isNull(V.deletedAt))
+      .orderBy(sql`${V.updatedAt} desc`)
+      .limit(5),
+  ]);
+  return { ...t, recientes };
 }

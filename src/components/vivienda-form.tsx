@@ -1,5 +1,6 @@
 "use client";
 
+import { Camera, Droplets, House, MapPin, Plus, Signature, Smartphone, UserRound, UsersRound, X, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -93,10 +94,13 @@ function SiNo({ value, onChange }: { value: boolean | null | undefined; onChange
   );
 }
 
-function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+function Seccion({ titulo, icono: Icono, children }: { titulo: string; icono: LucideIcon; children: React.ReactNode }) {
   return (
     <section className="tarjeta space-y-3">
-      <h2 className="font-semibold text-stone-800">{titulo}</h2>
+      <h2 className="flex items-center gap-2 text-lg font-bold text-stone-900">
+        <Icono className="size-5 text-marca-700" aria-hidden />
+        {titulo}
+      </h2>
       {children}
     </section>
   );
@@ -143,14 +147,14 @@ function useGps() {
       (e) => {
         detener();
         setEstado(mejor ? "listo" : "error");
-        setError(e.code === 1 ? "Debes permitir el acceso a la ubicación" : "No se pudo obtener la ubicación. Intenta al aire libre.");
+        setError(e.code === 1 ? "Debe permitir el acceso a la ubicación en el navegador" : "No se pudo obtener la ubicación. Intente al aire libre.");
       },
       { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 },
     );
     timer.current = setTimeout(() => {
       detener();
       setEstado(mejor ? "listo" : "error");
-      if (!mejor) setError("No se obtuvo señal GPS. Intenta al aire libre.");
+      if (!mejor) setError("No se obtuvo señal GPS. Intente al aire libre.");
     }, 30000);
   };
 
@@ -285,14 +289,14 @@ export function ViviendaForm({
 
   const guardar = async () => {
     setError(undefined);
-    if (!pos) return setError("Falta la ubicación: usa el GPS o marca la casa en el mapa.");
-    if (miembros.some((m) => !m.nombres.trim())) return setError("Hay miembros sin nombre: complétalos o quítalos.");
-    if (!jefe.nombres.trim() && miembros.length) return setError("Escribe el nombre de la cabeza de familia.");
+    if (!pos) return setError("Falta la ubicación: use el GPS o marque la casa en el mapa.");
+    if (miembros.some((m) => !m.nombres.trim())) return setError("Hay miembros sin nombre: complételos o quítelos.");
+    if (!jefe.nombres.trim() && miembros.length) return setError("Escriba el nombre de la cabeza de familia.");
     const personas = [...(jefe.nombres.trim() ? [jefe] : []), ...miembros].map((p) => ({ ...p, nombres: p.nombres.trim() }));
     if (personas.length && !v.autorizacionDatos)
       return setError("Para registrar datos de las personas se necesita la autorización de tratamiento de datos.");
     if (v.autorizacionDatos && !v.autorizacionNombre?.trim())
-      return setError("Escribe el nombre de quien autoriza el tratamiento de datos.");
+      return setError("Escriba el nombre de quien autoriza el tratamiento de datos.");
 
     // Limpiar respuestas que no aplican
     const vivienda = {
@@ -351,12 +355,12 @@ export function ViviendaForm({
   if (guardadaLocal)
     return (
       <div className="tarjeta space-y-4 py-10 text-center">
-        <div className="text-5xl">📲</div>
+        <Smartphone className="mx-auto size-12 text-marca-700" aria-hidden />
         <h2 className="text-xl font-bold">Guardada en el teléfono</h2>
         <p className="text-stone-600">
           No hay señal en este momento. La vivienda se subirá sola cuando vuelva la conexión (o desde “Pendientes”).
         </p>
-        {error && <p className="rounded-lg bg-red-50 p-2 text-sm text-red-700">{error}</p>}
+        {error && <p className="rounded-lg bg-teja-50 px-3 py-2.5 text-teja-700" role="alert">{error}</p>}
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
           {!editando && (
             <button className="btn-primario" onClick={reiniciar}>
@@ -371,7 +375,7 @@ export function ViviendaForm({
   return (
     <div className="space-y-4 pb-28">
       {/* Ubicación */}
-      <Seccion titulo="📍 Ubicación de la casa">
+      <Seccion titulo="Ubicación de la casa" icono={MapPin}>
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" className="btn-primario" onClick={tomarGps} disabled={gps.estado === "buscando"}>
             {gps.estado === "buscando" ? "Buscando señal GPS…" : pos ? "Volver a tomar GPS" : "Tomar ubicación GPS"}
@@ -382,25 +386,25 @@ export function ViviendaForm({
         </div>
         {pos ? (
           <div className="text-sm">
-            <span className="font-mono">{pos[0].toFixed(6)}, {pos[1].toFixed(6)}</span>
+            <span className="num text-stone-700">{pos[0].toFixed(6)}, {pos[1].toFixed(6)}</span>
             {v.precisionM != null && !v.ubicacionAjustada && (
               <span
-                className={`ml-2 rounded px-1.5 py-0.5 text-xs font-semibold ${
-                  v.precisionM <= 10 ? "bg-marca-100 text-marca-800" : v.precisionM <= 25 ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"
+                className={`chip ml-2 ${
+                  v.precisionM <= 10 ? "bg-marca-100 text-marca-800" : v.precisionM <= 25 ? "bg-ocre-100 text-ocre-800" : "bg-teja-100 text-teja-700"
                 }`}
               >
                 ± {Math.round(v.precisionM)} m
               </span>
             )}
-            {v.ubicacionAjustada && <span className="ml-2 rounded bg-sky-100 px-1.5 py-0.5 text-xs text-sky-800">Ajustada en el mapa</span>}
+            {v.ubicacionAjustada && <span className="ml-2 chip ml-2 bg-postigo-50 text-postigo-800">Ajustada en el mapa</span>}
           </div>
         ) : (
-          <p className="text-sm text-stone-500">Párate frente a la casa y toma la ubicación.</p>
+          <p className="text-stone-600">Párese frente a la casa y tome la ubicación.</p>
         )}
         {gps.estado === "buscando" && gps.lectura && (
-          <p className="text-xs text-stone-500">Mejorando precisión… espera unos segundos para un punto más exacto.</p>
+          <p className="text-sm text-stone-600" role="status">Mejorando la precisión… espere unos segundos para un punto más exacto.</p>
         )}
-        {gps.error && <p className="text-sm text-red-700">{gps.error}</p>}
+        {gps.error && <p className="text-teja-700" role="alert">{gps.error}</p>}
         {verMapa && (
           <>
             <MapaSelector
@@ -411,8 +415,8 @@ export function ViviendaForm({
                 setV((x) => ({ ...x, lat, lng, ubicacionAjustada: true }));
               }}
             />
-            <p className="text-xs text-stone-500">
-              Toca el mapa o arrastra la casita para corregir el punto. (Sin señal el mapa puede verse vacío; el GPS sí funciona.)
+            <p className="text-sm text-stone-600">
+              Toque el mapa o arrastre la casa para corregir el punto. Sin señal el mapa puede verse vacío, pero el GPS sí funciona.
             </p>
           </>
         )}
@@ -429,7 +433,7 @@ export function ViviendaForm({
       </Seccion>
 
       {/* 1–4 Cabeza de familia */}
-      <Seccion titulo="👤 Cabeza de familia">
+      <Seccion titulo="Cabeza de familia" icono={UserRound}>
         <Campo label="1. Nombre de la cabeza de familia">
           <input className="input" autoCapitalize="words" value={jefe.nombres} onChange={(e) => setJ("nombres", e.target.value)} />
         </Campo>
@@ -447,7 +451,7 @@ export function ViviendaForm({
       </Seccion>
 
       {/* 5, 6, 8 La casa */}
-      <Seccion titulo="🏠 La casa">
+      <Seccion titulo="La casa" icono={House}>
         <Campo label="5. Nombre del predio o referencia">
           <input className="input" placeholder="Nombre de la finca o predio" value={v.nombrePredio ?? ""} onChange={(e) => set("nombrePredio", e.target.value)} />
           <input
@@ -466,14 +470,14 @@ export function ViviendaForm({
       </Seccion>
 
       {/* 7 Demás miembros */}
-      <Seccion titulo={`👨‍👩‍👧 7. Demás miembros de la casa (${miembros.length})`}>
+      <Seccion titulo={`7. Demás miembros de la casa (${miembros.length})`} icono={UsersRound}>
         {miembros.map((m, i) => (
           <div key={m.id} className="space-y-2 rounded-lg border border-stone-200 p-3">
             <div className="flex items-center justify-between text-sm">
               <span className="font-semibold text-stone-600">Miembro {i + 1}</span>
               <button
                 type="button"
-                className="text-red-700"
+                className="min-h-10 px-2 font-semibold text-teja-700"
                 onClick={() => (!m.nombres || confirm("¿Quitar este miembro?")) && setMiembros((xs) => xs.filter((x) => x.id !== m.id))}
               >
                 Quitar
@@ -488,11 +492,11 @@ export function ViviendaForm({
             />
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-xs text-stone-500">Edad</label>
+                <label className="label">Edad</label>
                 <EdadInput p={m} onChange={(np) => setM(m.id, np)} />
               </div>
               <div>
-                <label className="text-xs text-stone-500">Documento (opcional)</label>
+                <label className="label">Documento (opcional)</label>
                 <input
                   className="input"
                   inputMode="numeric"
@@ -509,7 +513,7 @@ export function ViviendaForm({
       </Seccion>
 
       {/* 9–12 Acueducto */}
-      <Seccion titulo="💧 Acueducto">
+      <Seccion titulo="Acueducto" icono={Droplets}>
         <Campo label="9. ¿Tiene servicio de acueducto?">
           <SiNo value={v.usaAcueducto} onChange={(x) => set("usaAcueducto", x ?? false)} />
         </Campo>
@@ -524,8 +528,8 @@ export function ViviendaForm({
               </Campo>
             )}
             {alquilada && (
-              <div className="space-y-2 rounded-lg bg-amber-50 p-3">
-                <p className="text-sm font-medium text-amber-900">12. Casa alquilada: titular de la matrícula</p>
+              <div className="space-y-2 rounded-lg bg-ocre-50 p-3 ring-1 ring-ocre-100">
+                <p className="font-semibold text-ocre-800">12. Casa alquilada: titular de la matrícula</p>
                 <input
                   className="input"
                   placeholder="Nombre del titular"
@@ -551,31 +555,33 @@ export function ViviendaForm({
       </Seccion>
 
       {/* Fotos */}
-      <Seccion titulo="📷 Fotos (opcional)">
+      <Seccion titulo="Fotos (opcional)" icono={Camera}>
         <div className="flex flex-wrap gap-2">
           {fotos.map((f) => (
             <div key={f.id} className="relative">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={f.url} alt="" className="h-24 w-24 rounded-lg object-cover" />
+              <img src={f.url} alt="" className="size-24 rounded-lg object-cover" />
               <button
                 type="button"
-                className="absolute -right-2 -top-2 h-6 w-6 rounded-full bg-red-600 text-xs text-white"
+                className="absolute -top-2 -right-2 flex size-8 items-center justify-center rounded-full bg-teja-600 text-white shadow"
+                aria-label="Quitar foto"
                 onClick={() => setFotos((xs) => xs.filter((x) => x.id !== f.id))}
               >
-                ✕
+                <X className="size-4" aria-hidden />
               </button>
             </div>
           ))}
-          <label className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-stone-300 text-xs text-stone-500">
-            <span className="text-2xl">＋</span>Foto
+          <label className="flex size-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-stone-300 text-sm font-semibold text-stone-600 hover:border-marca-600 hover:text-marca-700">
+            <Plus className="size-6" aria-hidden />
+            Tomar foto
             <input type="file" accept="image/*" capture="environment" multiple className="hidden" onChange={(e) => agregarFotos(e.target.files)} />
           </label>
         </div>
-        {editando && <p className="text-xs text-stone-500">Las fotos que agregues aquí se suman a las ya guardadas.</p>}
+        {editando && <p className="text-sm text-stone-600">Las fotos nuevas se suman a las ya guardadas.</p>}
       </Seccion>
 
       {/* Autorización */}
-      <Seccion titulo="✍️ Autorización de datos personales">
+      <Seccion titulo="Autorización de datos personales" icono={Signature}>
         <p className="text-sm text-stone-600">
           Lea a la familia: “La Junta de Acción Comunal recoge estos datos solo para la gestión comunitaria y del acueducto
           de la vereda. No se compartirán con terceros sin su permiso. Puede pedir consultarlos, corregirlos o eliminarlos en
@@ -601,9 +607,9 @@ export function ViviendaForm({
       </Seccion>
 
       {/* Barra de guardar fija abajo */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-white/95 p-3 backdrop-blur lg:left-64">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-white p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-2px_10px_rgb(26_32_28/0.08)] lg:left-64">
         <div className="mx-auto max-w-3xl">
-          {error && <p className="mb-2 rounded-lg bg-red-50 p-2 text-sm text-red-700">{error}</p>}
+          {error && <p className="mb-2 rounded-lg bg-teja-50 px-3 py-2.5 text-teja-700" role="alert">{error}</p>}
           <button className="btn-primario w-full py-3 text-base" onClick={guardar} disabled={guardando}>
             {guardando ? "Guardando…" : editando ? "Guardar cambios" : "Guardar vivienda"}
           </button>

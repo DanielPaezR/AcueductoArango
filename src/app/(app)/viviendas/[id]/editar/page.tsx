@@ -17,8 +17,8 @@ export default async function EditarVivienda({ params }: PageProps<"/viviendas/[
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <Link href={`/viviendas/${id}`} className="text-sm text-marca-700 hover:underline">← Volver a la ficha</Link>
-      <h1 className="text-2xl font-bold">Editar {v.codigo}</h1>
+      <Link href={`/viviendas/${id}`} className="font-semibold text-marca-700 hover:underline">← Volver a la ficha</Link>
+      <h1 className="text-[1.75rem] leading-tight font-bold">Editar {v.codigo}</h1>
       <ViviendaForm
         sectores={sectores.map((s) => ({ id: s.id, nombre: s.nombre }))}
         inicial={{

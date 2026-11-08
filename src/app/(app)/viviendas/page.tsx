@@ -1,7 +1,7 @@
+import { Plus, Search } from "lucide-react";
 import Link from "next/link";
+import { FilaVivienda } from "@/components/fila-vivienda";
 import { listarSectores, listarViviendas } from "@/lib/consultas";
-import { miniatura } from "@/lib/imagenes";
-import { ESTADO_VIVIENDA_LABEL } from "@/lib/opciones";
 import { puede } from "@/lib/permisos";
 import { requerirPermiso } from "@/lib/session";
 
@@ -30,72 +30,80 @@ export default async function Viviendas({ searchParams }: PageProps<"/viviendas"
     return `/viviendas?${s}`;
   };
 
+  const filtrando = Boolean(q || sector || acueducto !== undefined);
+
   return (
-    <div className="mx-auto max-w-5xl space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold">Viviendas y personas</h1>
+    <div className="mx-auto max-w-3xl space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-[1.75rem] leading-tight font-bold">Viviendas</h1>
         <div className="flex gap-2">
-          {puede(u, "censo", "editar") && <Link href="/viviendas/sectores" className="btn-secundario">Sectores</Link>}
-          {puede(u, "censo", "crear") && <Link href="/viviendas/nueva" className="btn-primario">+ Nueva vivienda</Link>}
+          {puede(u, "censo", "editar") && (
+            <Link href="/viviendas/sectores" className="btn-secundario">Sectores</Link>
+          )}
+          {puede(u, "censo", "crear") && (
+            <Link href="/viviendas/nueva" className="btn-primario">
+              <Plus className="size-5" aria-hidden />
+              Registrar visita
+            </Link>
+          )}
         </div>
       </div>
 
-      <form className="flex flex-wrap gap-2">
-        <input name="q" defaultValue={q} placeholder="Buscar por nombre, cédula, código o referencia" className="input min-w-60 flex-1" />
-        <select name="sector" defaultValue={sector ?? ""} className="input w-auto">
-          <option value="">Todos los sectores</option>
-          {sectores.map((s) => (
-            <option key={s.id} value={s.id}>{s.nombre}</option>
-          ))}
-        </select>
-        <select name="acueducto" defaultValue={String(sp.acueducto ?? "")} className="input w-auto">
-          <option value="">Con y sin acueducto</option>
-          <option value="si">Usan acueducto</option>
-          <option value="no">No usan acueducto</option>
-        </select>
-        <button className="btn-secundario">Filtrar</button>
+      <form className="space-y-2.5" role="search">
+        <div className="relative">
+          <Search className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-stone-500" aria-hidden />
+          <input
+            name="q"
+            defaultValue={q}
+            placeholder="Nombre, cédula, código o referencia"
+            className="input pl-11"
+            aria-label="Buscar vivienda"
+            type="search"
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <select name="sector" defaultValue={sector ?? ""} className="input w-auto flex-1" aria-label="Sector">
+            <option value="">Todos los sectores</option>
+            {sectores.map((s) => (
+              <option key={s.id} value={s.id}>{s.nombre}</option>
+            ))}
+          </select>
+          <select name="acueducto" defaultValue={String(sp.acueducto ?? "")} className="input w-auto flex-1" aria-label="Acueducto">
+            <option value="">Con y sin acueducto</option>
+            <option value="si">Con acueducto</option>
+            <option value="no">Sin acueducto</option>
+          </select>
+          <button className="btn-secundario">Buscar</button>
+        </div>
       </form>
 
-      <p className="text-sm text-stone-500">{total} vivienda(s)</p>
+      <p className="text-stone-600" role="status">
+        <span className="num font-semibold text-stone-900">{total}</span> vivienda{total === 1 ? "" : "s"}
+        {filtrando && (
+          <>
+            {" · "}
+            <Link href="/viviendas" className="font-semibold text-marca-700 hover:underline">Quitar filtros</Link>
+          </>
+        )}
+      </p>
 
-      <div className="space-y-2">
+      <div className="space-y-2.5">
         {filas.map((v) => (
-          <Link key={v.id} href={`/viviendas/${v.id}`} className="tarjeta flex items-center gap-3 p-3 hover:border-marca-600">
-            {v.fotoPrincipalUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={miniatura(v.fotoPrincipalUrl, 120, 120)!} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" />
-            ) : (
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-2xl">🏠</div>
-            )}
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-mono text-xs text-stone-500">{v.codigo}</span>
-                <span className="truncate font-semibold">{v.jefe ?? "Sin familia registrada"}</span>
-              </div>
-              <div className="truncate text-sm text-stone-500">
-                {[v.sector, v.nombrePredio, v.referencia].filter(Boolean).join(" · ") || "—"}
-              </div>
-            </div>
-            <div className="shrink-0 text-right text-xs">
-              <div>{v.personas} 👤</div>
-              {v.usaAcueducto && <div className="text-sky-700">💧 Acueducto</div>}
-              {v.estado !== "habitada" && <div className="text-amber-700">{ESTADO_VIVIENDA_LABEL[v.estado]}</div>}
-            </div>
-          </Link>
+          <FilaVivienda key={v.id} v={v} />
         ))}
         {!filas.length && (
-          <div className="tarjeta py-10 text-center text-stone-500">
-            {q || sector || acueducto !== undefined ? "No hay resultados con esos filtros." : "Aún no hay viviendas registradas."}
+          <div className="tarjeta text-stone-600">
+            {filtrando ? "No hay viviendas con esos filtros." : "Aún no hay viviendas registradas."}
           </div>
         )}
       </div>
 
       {paginas > 1 && (
-        <div className="flex items-center justify-center gap-3 text-sm">
-          {pagina > 1 && <Link className="btn-secundario" href={enlace(pagina - 1)}>← Anterior</Link>}
-          <span>Página {pagina} de {paginas}</span>
-          {pagina < paginas && <Link className="btn-secundario" href={enlace(pagina + 1)}>Siguiente →</Link>}
-        </div>
+        <nav className="flex items-center justify-center gap-3" aria-label="Páginas">
+          {pagina > 1 && <Link className="btn-secundario" href={enlace(pagina - 1)}>Anterior</Link>}
+          <span className="num text-stone-700">Página {pagina} de {paginas}</span>
+          {pagina < paginas && <Link className="btn-secundario" href={enlace(pagina + 1)}>Siguiente</Link>}
+        </nav>
       )}
     </div>
   );

@@ -3,7 +3,7 @@
  * - Páginas: network-first; si no hay señal, se sirve la última versión guardada.
  * - Teselas del mapa satelital: se guardan las que se ven con señal para poder verlas sin ella.
  */
-const VERSION = "v1";
+const VERSION = "v2";
 const C_ESTATICO = `estatico-${VERSION}`;
 const C_PAGINAS = `paginas-${VERSION}`;
 const C_TESELAS = "teselas-v1";

@@ -20,9 +20,9 @@ export async function POST(req: Request) {
   const existente = await db.query.viviendas.findFirst({ where: eq(schema.viviendas.id, v.id) });
   if (existente?.deletedAt) return Response.json({ error: "Esta vivienda fue eliminada" }, { status: 409 });
   if (existente && !puede(usuario, "censo", "editar"))
-    return Response.json({ error: "No tienes permiso para editar viviendas" }, { status: 403 });
+    return Response.json({ error: "No tiene permiso para editar viviendas" }, { status: 403 });
   if (!existente && !puede(usuario, "censo", "crear"))
-    return Response.json({ error: "No tienes permiso para crear viviendas" }, { status: 403 });
+    return Response.json({ error: "No tiene permiso para crear viviendas" }, { status: 403 });
 
   // Personas: no permitir "robar" un id que pertenezca a otra vivienda
   if (personas.length) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useLiveQuery } from "dexie-react-hooks";
+import { CloudOff, CloudUpload, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { dbLocal } from "@/lib/offline/db";
@@ -20,26 +21,15 @@ export function useEnLinea() {
   return useSyncExternalStore(suscribirConexion, () => navigator.onLine, () => true);
 }
 
+export function usePendientes() {
+  return useLiveQuery(async () => (await dbLocal.viviendas.count()) + (await dbLocal.fotos.count()), []) ?? 0;
+}
+
 /** Páginas que se guardan en el teléfono para poder trabajar sin señal. */
 const PRECARGAR = ["/", "/viviendas/nueva", "/viviendas/pendientes"];
 
-export function SyncStatus({ compacto = false }: { compacto?: boolean }) {
-  const enLinea = useEnLinea();
-  const pendientes =
-    useLiveQuery(async () => (await dbLocal.viviendas.count()) + (await dbLocal.fotos.count()), []) ?? 0;
-  const [sincronizando, setSincronizando] = useState(false);
-  const [mensaje, setMensaje] = useState<string>();
-
-  const sync = useCallback(async () => {
-    if (!navigator.onLine) return;
-    setSincronizando(true);
-    const r = await sincronizar();
-    setSincronizando(false);
-    if (r.sesionVencida) setMensaje("Sesión vencida: vuelve a ingresar para subir los datos");
-    else if (r.fallidas) setMensaje(r.ultimoError);
-    else setMensaje(r.subidas ? `${r.subidas} registro(s) subidos` : undefined);
-  }, []);
-
+/** Motor en segundo plano: registra el service worker y sube pendientes. Montar una sola vez. */
+export function SyncMotor() {
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
@@ -50,52 +40,84 @@ export function SyncStatus({ compacto = false }: { compacto?: boolean }) {
         })
         .catch(() => {});
     }
-
-    const on = () => sync();
-    window.addEventListener("online", on);
-    const t = setInterval(() => navigator.onLine && sync(), 60_000);
-    const inicial = setTimeout(() => navigator.onLine && sync(), 1500);
+    const sync = () => navigator.onLine && sincronizar();
+    window.addEventListener("online", sync);
+    const t = setInterval(sync, 60_000);
+    const inicial = setTimeout(sync, 1500);
     return () => {
-      window.removeEventListener("online", on);
+      window.removeEventListener("online", sync);
       clearInterval(t);
       clearTimeout(inicial);
     };
-  }, [sync]);
+  }, []);
+  return null;
+}
 
-  const punto = enLinea ? "bg-marca-600" : "bg-amber-500";
-  const texto = enLinea ? "En línea" : "Sin señal";
+/** Indicador compacto para la barra verde superior. */
+export function SyncIndicador() {
+  const enLinea = useEnLinea();
+  const pendientes = usePendientes();
 
-  if (compacto)
+  if (pendientes > 0)
     return (
-      <Link href="/viviendas/pendientes" className="ml-auto flex items-center gap-2 text-xs text-stone-600">
-        <span className={`h-2.5 w-2.5 rounded-full ${punto}`} />
-        {pendientes > 0 ? (
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-800">
-            {pendientes} sin subir
-          </span>
-        ) : (
-          texto
-        )}
+      <Link
+        href="/viviendas/pendientes"
+        className="chip bg-ocre-100 py-1 text-ocre-800 ring-1 ring-ocre-500/40"
+        aria-label={`${pendientes} registros sin subir`}
+      >
+        <CloudUpload className="size-4" aria-hidden />
+        <span className="num">{pendientes}</span> sin subir
       </Link>
     );
 
   return (
-    <div className="mx-3 mb-2 rounded-lg bg-stone-50 p-3 text-xs">
-      <div className="flex items-center gap-2">
-        <span className={`h-2.5 w-2.5 rounded-full ${punto}`} />
-        <span className="font-medium text-stone-700">{texto}</span>
-        {pendientes > 0 && (
-          <Link href="/viviendas/pendientes" className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-800">
-            {pendientes} sin subir
-          </Link>
-        )}
-      </div>
-      {pendientes > 0 && enLinea && (
-        <button onClick={sync} disabled={sincronizando} className="mt-2 w-full rounded-md bg-white py-1.5 font-semibold text-marca-800 ring-1 ring-stone-200">
-          {sincronizando ? "Subiendo…" : "Sincronizar ahora"}
+    <span className="chip bg-white/10 py-1 text-marca-50" role="status">
+      {enLinea ? (
+        <span className="size-2 rounded-full bg-[#7fd4a0]" aria-hidden />
+      ) : (
+        <CloudOff className="size-4" aria-hidden />
+      )}
+      {enLinea ? "En línea" : "Sin señal"}
+    </span>
+  );
+}
+
+/** Botón para subir ahora (pantalla de pendientes y riel de escritorio). */
+export function BotonSincronizar({ className = "" }: { className?: string }) {
+  const enLinea = useEnLinea();
+  const pendientes = usePendientes();
+  const [subiendo, setSubiendo] = useState(false);
+  const [mensaje, setMensaje] = useState<string>();
+
+  const sync = useCallback(async () => {
+    setSubiendo(true);
+    const r = await sincronizar();
+    setSubiendo(false);
+    setMensaje(
+      r.sesionVencida
+        ? "Su sesión venció. Ingrese de nuevo con señal; los datos siguen guardados en el teléfono."
+        : r.fallidas
+          ? `No se pudo subir todo: ${r.ultimoError}`
+          : r.subidas
+            ? `Listo: ${r.subidas} registro(s) subidos.`
+            : undefined,
+    );
+  }, []);
+
+  if (!pendientes && !mensaje) return null;
+  return (
+    <div className={className}>
+      {pendientes > 0 && (
+        <button className="btn-primario w-full" onClick={sync} disabled={subiendo || !enLinea}>
+          <RefreshCw className={`size-5 ${subiendo ? "animate-spin" : ""}`} aria-hidden />
+          {!enLinea ? "Esperando señal…" : subiendo ? "Subiendo…" : "Subir ahora"}
         </button>
       )}
-      {mensaje && <p className="mt-1 text-stone-500">{mensaje}</p>}
+      {mensaje && (
+        <p className="mt-2 text-sm text-stone-700" role="status">
+          {mensaje}
+        </p>
+      )}
     </div>
   );
 }

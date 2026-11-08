@@ -63,7 +63,7 @@ export function EditarUsuarioForm({
           <p className="text-sm text-stone-500">El superadministrador tiene acceso total.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full">
               <thead>
                 <tr className="text-left text-stone-500">
                   <th className="py-2 pr-2">Sección</th>
@@ -83,7 +83,7 @@ export function EditarUsuarioForm({
                           name={`p.${s}.${a}`}
                           defaultChecked={permisos[s]?.includes(a)}
                           disabled={!editable}
-                          className="h-5 w-5 accent-marca-700"
+                          className="size-6 accent-marca-700"
                         />
                       </td>
                     ))}
@@ -92,7 +92,7 @@ export function EditarUsuarioForm({
               </tbody>
             </table>
             {editable && (
-              <label className="mt-3 flex items-center gap-2 text-sm text-stone-600">
+              <label className="mt-3 flex items-center gap-2 text-stone-700">
                 <input type="checkbox" name="usarPlantilla" className="h-4 w-4 accent-marca-700" />
                 Restablecer a los permisos por defecto del rol
               </label>
@@ -101,8 +101,8 @@ export function EditarUsuarioForm({
         )}
       </div>
 
-      {estado?.error && <p className="rounded-lg bg-red-50 p-2 text-sm text-red-700">{estado.error}</p>}
-      {estado?.ok && <p className="rounded-lg bg-marca-50 p-2 text-sm text-marca-800">{estado.ok}</p>}
+      {estado?.error && <p className="rounded-lg bg-teja-50 px-3 py-2.5 text-teja-700" role="alert">{estado.error}</p>}
+      {estado?.ok && <p className="rounded-lg bg-marca-50 px-3 py-2.5 text-marca-800" role="status">{estado.ok}</p>}
       {editable && <button className="btn-primario" disabled={pendiente}>Guardar cambios</button>}
     </form>
   );
@@ -114,7 +114,7 @@ export function EstadoUsuarioBoton({ id, activo }: { id: string; activo: boolean
   return (
     <div className="text-right">
       <button
-        className={activo ? "btn-secundario text-red-700" : "btn-primario"}
+        className={activo ? "btn-peligro" : "btn-primario"}
         disabled={pendiente}
         onClick={() =>
           start(async () => {
@@ -129,7 +129,7 @@ export function EstadoUsuarioBoton({ id, activo }: { id: string; activo: boolean
       >
         {activo ? "Desactivar" : "Activar"}
       </button>
-      {error && <p className="mt-1 text-xs text-red-700">{error}</p>}
+      {error && <p className="mt-1 text-sm text-teja-700">{error}</p>}
     </div>
   );
 }
@@ -144,8 +144,8 @@ export function RestablecerPasswordForm({ id }: { id: string }) {
         <input name="password" className="input" minLength={8} required />
       </div>
       <button className="btn-secundario" disabled={pendiente}>Asignar</button>
-      {estado?.error && <p className="w-full text-sm text-red-700">{estado.error}</p>}
-      {estado?.ok && <p className="w-full text-sm text-marca-800">{estado.ok}</p>}
+      {estado?.error && <p className="w-full text-teja-700">{estado.error}</p>}
+      {estado?.ok && <p className="w-full text-marca-800">{estado.ok}</p>}
     </form>
   );
 }

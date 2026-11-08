@@ -30,14 +30,14 @@ export function NuevoUsuarioForm({ puedeSuperadmin }: { puedeSuperadmin: boolean
               <option key={r} value={r}>{l}</option>
             ))}
         </select>
-        <p className="mt-1 text-xs text-stone-500">Se aplican los permisos por defecto del rol; luego puedes ajustarlos.</p>
+        <p className="mt-1.5 text-sm text-stone-600">Se aplican los permisos por defecto del rol; luego se pueden ajustar.</p>
       </div>
       <div>
         <label className="label">Contraseña temporal</label>
         <input name="password" className="input" minLength={8} required />
-        <p className="mt-1 text-xs text-stone-500">El usuario deberá cambiarla la primera vez que entre.</p>
+        <p className="mt-1.5 text-sm text-stone-600">El usuario deberá cambiarla la primera vez que entre.</p>
       </div>
-      {estado?.error && <p className="rounded-lg bg-red-50 p-2 text-sm text-red-700">{estado.error}</p>}
+      {estado?.error && <p className="rounded-lg bg-teja-50 px-3 py-2.5 text-teja-700" role="alert">{estado.error}</p>}
       <button className="btn-primario w-full" disabled={pendiente}>Crear usuario</button>
     </form>
   );

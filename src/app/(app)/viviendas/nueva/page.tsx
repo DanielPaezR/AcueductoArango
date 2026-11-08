@@ -9,7 +9,7 @@ export default async function NuevaVivienda() {
   const sectores = await listarSectores();
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <h1 className="text-2xl font-bold">Nueva vivienda</h1>
+      <h1 className="text-[1.75rem] leading-tight font-bold">Nueva vivienda</h1>
       <ViviendaForm sectores={sectores.map((s) => ({ id: s.id, nombre: s.nombre }))} />
     </div>
   );

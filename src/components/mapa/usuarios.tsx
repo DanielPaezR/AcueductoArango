@@ -2,6 +2,7 @@
 
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import { LocateFixed } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { CircleMarker, MapContainer, Popup, useMap } from "react-leaflet";
@@ -21,7 +22,10 @@ export type PuntoVivienda = {
   referencia: string | null;
 };
 
-const COLORES = ["#f97316", "#a855f7", "#eab308", "#ec4899", "#14b8a6", "#ef4444", "#84cc16", "#6366f1"];
+/** Colores para sectores sin color propio: pinturas de puertas y balcones. */
+const COLORES = ["#c48a1c", "#a8382c", "#7a4fa0", "#2a6b48", "#d0632a", "#3f7f8c", "#8c6d3f", "#b8487a"];
+const AGUA = "#1f6698";
+const SIN_AGUA = "#e0a526";
 
 function Encuadrar({ puntos }: { puntos: PuntoVivienda[] }) {
   const map = useMap();
@@ -40,7 +44,7 @@ function MiUbicacion() {
     <>
       <button
         type="button"
-        className="absolute bottom-6 right-3 z-[1000] rounded-full bg-white px-4 py-2 text-sm font-semibold shadow-lg"
+        className="absolute right-3 bottom-8 z-[1000] inline-flex min-h-12 items-center gap-2 rounded-full bg-white px-4 font-semibold text-stone-900 shadow-[0_2px_8px_rgb(0_0_0/0.3)]"
         onClick={() =>
           navigator.geolocation.getCurrentPosition(
             (p) => {
@@ -53,9 +57,10 @@ function MiUbicacion() {
           )
         }
       >
-        📍 Dónde estoy
+        <LocateFixed className="size-5 text-postigo-700" aria-hidden />
+        Dónde estoy
       </button>
-      {pos && <CircleMarker center={pos} radius={8} pathOptions={{ color: "#fff", fillColor: "#2563eb", fillOpacity: 1, weight: 3 }} />}
+      {pos && <CircleMarker center={pos} radius={8} pathOptions={{ color: "#fff", fillColor: AGUA, fillOpacity: 1, weight: 3 }} />}
     </>
   );
 }
@@ -88,31 +93,44 @@ export default function MapaUsuarios({
 
   const color = (p: PuntoVivienda) =>
     colorPor === "sector"
-      ? (p.sectorId && colorSector.get(p.sectorId)) || "#9ca3af"
+      ? (p.sectorId && colorSector.get(p.sectorId)) || "#8f978f"
       : p.usaAcueducto
-        ? "#0ea5e9"
-        : "#f59e0b";
+        ? AGUA
+        : SIN_AGUA;
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex flex-wrap gap-2 border-b border-stone-200 bg-white p-2 text-sm">
-        <input className="input max-w-48 py-1" placeholder="Buscar código o nombre" value={q} onChange={(e) => setQ(e.target.value)} />
-        <select className="input w-auto py-1" value={sector} onChange={(e) => setSector(e.target.value)}>
-          <option value="">Todos los sectores</option>
-          {sectores.map((s) => (
-            <option key={s.id} value={s.id}>{s.nombre}</option>
-          ))}
-        </select>
-        <select className="input w-auto py-1" value={acueducto} onChange={(e) => setAcueducto(e.target.value)}>
-          <option value="">Con y sin acueducto</option>
-          <option value="true">Usan acueducto</option>
-          <option value="false">No usan acueducto</option>
-        </select>
-        <select className="input w-auto py-1" value={colorPor} onChange={(e) => setColorPor(e.target.value as "acueducto" | "sector")}>
-          <option value="acueducto">Color: acueducto</option>
-          <option value="sector">Color: sector</option>
-        </select>
-        <span className="self-center text-stone-500">{visibles.length} viviendas</span>
+      <div className="space-y-2 border-b border-stone-200 bg-white px-3 py-2.5">
+        <div className="flex items-center gap-2">
+          <input
+            className="input min-h-11 flex-1"
+            type="search"
+            aria-label="Buscar"
+            placeholder="Buscar nombre o código"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+          <span className="shrink-0 px-1 text-stone-700" role="status">
+            <span className="num font-bold">{visibles.length}</span> casas
+          </span>
+        </div>
+        <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-0.5">
+          <select className="input min-h-10 w-auto shrink-0 py-1.5 text-[0.95rem]" aria-label="Sector" value={sector} onChange={(e) => setSector(e.target.value)}>
+            <option value="">Todos los sectores</option>
+            {sectores.map((s) => (
+              <option key={s.id} value={s.id}>{s.nombre}</option>
+            ))}
+          </select>
+          <select className="input min-h-10 w-auto shrink-0 py-1.5 text-[0.95rem]" aria-label="Acueducto" value={acueducto} onChange={(e) => setAcueducto(e.target.value)}>
+            <option value="">Con y sin acueducto</option>
+            <option value="true">Con acueducto</option>
+            <option value="false">Sin acueducto</option>
+          </select>
+          <select className="input min-h-10 w-auto shrink-0 py-1.5 text-[0.95rem]" aria-label="Colorear por" value={colorPor} onChange={(e) => setColorPor(e.target.value as "acueducto" | "sector")}>
+            <option value="acueducto">Colores: acueducto</option>
+            <option value="sector">Colores: sector</option>
+          </select>
+        </div>
       </div>
       <div className="relative flex-1">
         <MapContainer center={CENTRO_MUNICIPIO} zoom={14} className="absolute inset-0" preferCanvas>
@@ -123,33 +141,33 @@ export default function MapaUsuarios({
             <CircleMarker
               key={p.id}
               center={[p.lat, p.lng]}
-              radius={8}
-              pathOptions={{ color: "#fff", weight: 2, fillColor: color(p), fillOpacity: p.estado === "habitada" ? 0.95 : 0.4 }}
+              radius={9}
+              pathOptions={{ color: "#fff", weight: 2.5, fillColor: color(p), fillOpacity: p.estado === "habitada" ? 0.95 : 0.4 }}
             >
               <Popup>
-                <div className="space-y-1 text-sm">
-                  <div className="font-bold">{p.codigo}</div>
-                  <div>{p.jefe ?? "Sin jefe de hogar registrado"}</div>
-                  <div className="text-stone-500">
-                    {p.personas} persona(s) · {p.usaAcueducto ? "💧 Usa acueducto" : "Sin acueducto"}
+                <div className="min-w-44 space-y-1 text-[0.95rem]">
+                  <div className="text-base font-bold text-stone-900">{p.jefe ?? "Sin familia registrada"}</div>
+                  <div className="num text-stone-600">{p.codigo}</div>
+                  <div className="text-stone-700">
+                    <span className="num">{p.personas}</span> persona(s) · {p.usaAcueducto ? "Con acueducto" : "Sin acueducto"}
                   </div>
-                  {p.referencia && <div className="text-xs text-stone-500">{p.referencia}</div>}
-                  <Link href={`/viviendas/${p.id}`} className="font-semibold text-marca-700">Ver ficha →</Link>
+                  {p.referencia && <div className="text-stone-600">{p.referencia}</div>}
+                  <Link href={`/viviendas/${p.id}`} className="inline-block pt-1 font-bold text-marca-700 underline">Ver ficha</Link>
                 </div>
               </Popup>
             </CircleMarker>
           ))}
         </MapContainer>
-        <div className="absolute bottom-6 left-3 z-[1000] rounded-lg bg-white/95 p-2 text-xs shadow">
+        <div className="absolute bottom-8 left-3 z-[1000] space-y-1 rounded-lg bg-white px-3 py-2 text-sm font-semibold shadow-[0_2px_8px_rgb(0_0_0/0.3)]">
           {colorPor === "acueducto" ? (
             <>
-              <div><span className="mr-1 inline-block h-3 w-3 rounded-full bg-sky-500 align-middle" />Usa acueducto</div>
-              <div><span className="mr-1 inline-block h-3 w-3 rounded-full bg-amber-500 align-middle" />No usa</div>
+              <div><span className="mr-1.5 inline-block size-3.5 rounded-full align-middle" style={{ background: AGUA }} />Con acueducto</div>
+              <div><span className="mr-1.5 inline-block size-3.5 rounded-full align-middle" style={{ background: SIN_AGUA }} />Sin acueducto</div>
             </>
           ) : (
             sectores.map((s) => (
               <div key={s.id}>
-                <span className="mr-1 inline-block h-3 w-3 rounded-full align-middle" style={{ background: colorSector.get(s.id) }} />
+                <span className="mr-1.5 inline-block size-3.5 rounded-full align-middle" style={{ background: colorSector.get(s.id) }} />
                 {s.nombre}
               </div>
             ))

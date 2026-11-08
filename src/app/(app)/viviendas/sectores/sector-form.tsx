@@ -23,8 +23,8 @@ export function SectorForm({ sector }: { sector?: { id: number; nombre: string; 
       <button className={sector ? "btn-secundario" : "btn-primario"} disabled={pendiente}>
         {sector ? "Guardar" : "Agregar"}
       </button>
-      {estado?.error && <p className="w-full text-sm text-red-700">{estado.error}</p>}
-      {estado?.ok && sector && <p className="w-full text-sm text-marca-800">{estado.ok}</p>}
+      {estado?.error && <p className="w-full text-teja-700">{estado.error}</p>}
+      {estado?.ok && sector && <p className="w-full text-marca-800">{estado.ok}</p>}
     </form>
   );
 }

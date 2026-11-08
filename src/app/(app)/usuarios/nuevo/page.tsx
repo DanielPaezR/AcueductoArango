@@ -7,7 +7,7 @@ export default async function NuevoUsuario() {
   const yo = await requerirPermiso("usuarios", "crear");
   return (
     <div className="mx-auto max-w-md space-y-4">
-      <h1 className="text-2xl font-bold">Nuevo usuario</h1>
+      <h1 className="text-[1.75rem] leading-tight font-bold">Nuevo usuario</h1>
       <div className="tarjeta">
         <NuevoUsuarioForm puedeSuperadmin={yo.rol === "superadmin"} />
       </div>

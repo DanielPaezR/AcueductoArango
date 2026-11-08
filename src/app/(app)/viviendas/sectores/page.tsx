@@ -10,8 +10,8 @@ export default async function Sectores() {
   const sectores = await listarSectores();
   return (
     <div className="mx-auto max-w-2xl space-y-4">
-      <Link href="/viviendas" className="text-sm text-marca-700 hover:underline">← Viviendas</Link>
-      <h1 className="text-2xl font-bold">Sectores de la vereda</h1>
+      <Link href="/viviendas" className="font-semibold text-marca-700 hover:underline">← Viviendas</Link>
+      <h1 className="text-[1.75rem] leading-tight font-bold">Sectores de la vereda</h1>
       <p className="text-sm text-stone-500">Sirven para agrupar las viviendas en listas, mapas y reportes. El color se usa en el mapa.</p>
       <div className="tarjeta">
         <h2 className="mb-3 font-semibold">Nuevo sector</h2>

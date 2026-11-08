@@ -2,14 +2,14 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Vereda — JAC y Acueducto", template: "%s · Vereda" },
-  description: "Censo, mapas y acueducto de la vereda",
+  title: { default: "JAC Arango", template: "%s · JAC Arango" },
+  description: "Censo, mapa y acueducto de la vereda Arango, Concepción (Antioquia)",
   icons: { icon: "/icons/icon-192.png", apple: "/icons/icon-192.png" },
-  appleWebApp: { capable: true, title: "Vereda", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "JAC Arango", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#166534",
+  themeColor: "#184a30",
   width: "device-width",
   initialScale: 1,
 };

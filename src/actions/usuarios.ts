@@ -91,7 +91,7 @@ export async function editarUsuario(_: Estado, form: FormData): Promise<Estado> 
   } catch (e) {
     return { error: (e as Error).message };
   }
-  if (u.id === yo.id && p.data.rol !== u.rol) return { error: "No puedes cambiar tu propio rol" };
+  if (u.id === yo.id && p.data.rol !== u.rol) return { error: "No puede cambiar su propio rol" };
 
   const permisos =
     p.data.usarPlantilla === "on" || p.data.rol !== u.rol ? PLANTILLAS[p.data.rol] : leerPermisos(form);
@@ -116,7 +116,7 @@ export async function editarUsuario(_: Estado, form: FormData): Promise<Estado> 
 
 export async function cambiarEstadoUsuario(id: string, activo: boolean) {
   const yo = await requerirPermiso("usuarios", "editar");
-  if (id === yo.id) throw new Error("No puedes desactivarte a ti mismo");
+  if (id === yo.id) throw new Error("No puede desactivar su propio usuario");
   const u = await db.query.usuarios.findFirst({ where: eq(schema.usuarios.id, id) });
   if (!u) return;
   if (u.rol === "superadmin") {

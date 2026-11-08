@@ -13,13 +13,13 @@ export type Estado = { error?: string; ok?: string; valores?: Record<string, str
 export async function login(_: Estado, form: FormData): Promise<Estado> {
   const username = String(form.get("username") ?? "").trim().toLowerCase();
   const password = String(form.get("password") ?? "");
-  if (!username || !password) return { error: "Ingresa usuario y contraseña", valores: { username } };
+  if (!username || !password) return { error: "Escriba su usuario y contraseña", valores: { username } };
 
   const u = await db.query.usuarios.findFirst({ where: eq(schema.usuarios.username, username) });
   // Comparar siempre para no revelar si el usuario existe por tiempo de respuesta
   const ok = await bcrypt.compare(password, u?.passwordHash ?? "$2b$12$invalidinvalidinvalidinvalidinvalidinvalidinvalidinva");
   if (!u || !ok) return { error: "Usuario o contraseña incorrectos", valores: { username } };
-  if (!u.activo) return { error: "Tu usuario está desactivado. Habla con el administrador." };
+  if (!u.activo) return { error: "Su usuario está desactivado. Hable con la presidencia de la Junta." };
 
   await db.update(schema.usuarios).set({ ultimoAcceso: new Date() }).where(eq(schema.usuarios.id, u.id));
   await auditar(u.id, "login", "usuario", u.id);
@@ -34,7 +34,7 @@ export async function logout() {
 
 const cambioSchema = z
   .object({
-    actual: z.string().min(1, "Ingresa tu contraseña actual"),
+    actual: z.string().min(1, "Escriba su contraseña actual"),
     nueva: z.string().min(8, "La nueva contraseña debe tener al menos 8 caracteres"),
     confirmar: z.string(),
   })

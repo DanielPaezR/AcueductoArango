@@ -7,7 +7,12 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const u = await requerirUsuario();
   const items = NAV.filter((i) => !i.seccion || puede(u, i.seccion, "ver"));
   return (
-    <Shell items={items} faseActual={FASE_ACTUAL} usuario={{ nombre: u.nombre, rolLabel: ROLES[u.rol as Rol] }}>
+    <Shell
+      items={items}
+      faseActual={FASE_ACTUAL}
+      puedeRegistrar={puede(u, "censo", "crear")}
+      usuario={{ nombre: u.nombre, rolLabel: ROLES[u.rol as Rol] }}
+    >
       {children}
     </Shell>
   );

@@ -1,5 +1,5 @@
 /**
- * Modelo de datos — Sistema de Información de la Vereda (JAC + Acueducto)
+ * Modelo de datos — JAC Arango (censo + acueducto de la vereda)
  *
  * Convenciones:
  * - Las entidades que se pueden crear en campo (offline) usan UUID como PK para que

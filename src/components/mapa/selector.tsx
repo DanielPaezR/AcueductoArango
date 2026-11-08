@@ -7,10 +7,17 @@ import { Circle, MapContainer, Marker, useMap, useMapEvents } from "react-leafle
 import { CENTRO_MUNICIPIO } from "@/lib/opciones";
 import { CapasBase } from "./capas";
 
+/** Marcador de casa: verde balcón con base azul (zócalo), contorno blanco para leer sobre satélite. */
 export const iconoCasa = L.divIcon({
   className: "",
-  html: '<div style="font-size:30px;line-height:30px;transform:translate(-4px,-26px);filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))">🏠</div>',
-  iconSize: [24, 24],
+  html: `<svg width="36" height="40" viewBox="0 0 36 40" style="filter:drop-shadow(0 2px 3px rgba(0,0,0,.45))">
+    <path d="M18 2 3 15h4v15h22V15h4z" fill="#1f5a3a" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/>
+    <rect x="7" y="27" width="22" height="3.5" fill="#1f6698"/>
+    <rect x="15" y="19" width="6" height="8" rx="1" fill="#f6f7f4"/>
+    <path d="M18 31v7" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+  </svg>`,
+  iconSize: [36, 40],
+  iconAnchor: [18, 38],
 });
 
 function Seguir({ pos }: { pos: [number, number] | null }) {
@@ -43,7 +50,7 @@ export default function MapaSelector({
       <Clic onChange={onChange} />
       {pos && (
         <>
-          {precision ? <Circle center={pos} radius={precision} pathOptions={{ color: "#38bdf8", weight: 1 }} /> : null}
+          {precision ? <Circle center={pos} radius={precision} pathOptions={{ color: "#1f6698", weight: 1.5, fillOpacity: 0.12 }} /> : null}
           <Marker
             position={pos}
             icon={iconoCasa}

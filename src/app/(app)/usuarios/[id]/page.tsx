@@ -20,9 +20,9 @@ export default async function UsuarioDetalle({ params }: PageProps<"/usuarios/[i
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <Link href="/usuarios" className="text-sm text-marca-700 hover:underline">← Usuarios</Link>
+      <Link href="/usuarios" className="font-semibold text-marca-700 hover:underline">← Usuarios</Link>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">{u.nombre}</h1>
+        <h1 className="text-[1.75rem] leading-tight font-bold">{u.nombre}</h1>
         {editable && u.id !== yo.id && <EstadoUsuarioBoton id={u.id} activo={u.activo} />}
       </div>
       <div className="tarjeta">

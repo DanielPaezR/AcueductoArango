@@ -11,7 +11,7 @@ export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const tieneSesion = req.cookies.has("vereda_session");
   if (!tieneSesion && pathname.startsWith("/api/")) {
-    return Response.json({ error: "Sesión vencida. Vuelve a ingresar." }, { status: 401 });
+    return Response.json({ error: "Sesión vencida. Ingrese de nuevo." }, { status: 401 });
   }
   if (!tieneSesion && !PUBLICAS.some((p) => pathname.startsWith(p))) {
     return NextResponse.redirect(new URL("/login", req.url));

@@ -40,3 +40,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# impeccable: motor compilado por plataforma y configuración local
+.claude/skills/impeccable/scripts/bin/
+.claude/settings.local.json
+.impeccable/config.local.json

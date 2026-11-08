@@ -12,7 +12,8 @@ const DURACION_DIAS = 30; // larga, porque en campo no siempre hay señal para v
 
 function secret() {
   const s = process.env.SESSION_SECRET;
-  if (!s || s.length < 32) throw new Error("SESSION_SECRET debe tener al menos 32 caracteres");
+  if (!s || s.length < 32)
+    throw new Error("Falta SESSION_SECRET (mínimo 32 caracteres) en las variables del servicio web");
   return new TextEncoder().encode(s);
 }
 

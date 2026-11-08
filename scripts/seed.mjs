@@ -2,6 +2,13 @@
 import pg from "pg";
 import bcrypt from "bcryptjs";
 
+if (!process.env.DATABASE_URL) {
+  console.error(
+    "✗ Falta la variable DATABASE_URL. En Railway: servicio web → Variables → + New Variable → Add Reference → Postgres → DATABASE_URL",
+  );
+  process.exit(1);
+}
+
 const { SEED_SUPERADMIN_USERNAME: username, SEED_SUPERADMIN_PASSWORD: password } = process.env;
 const nombre = process.env.SEED_SUPERADMIN_NOMBRE || "Superadministrador";
 

@@ -3,6 +3,7 @@ import { Landmark } from "lucide-react";
 import Link from "next/link";
 import { connection } from "next/server";
 import { FilaMovimiento } from "@/components/lista-movimientos";
+import { ConsultaEstado } from "./consulta";
 import { db, schema } from "@/db";
 import { nombreMes, pesos } from "@/lib/dinero";
 import { cuentasConSaldo, listarMovimientos, resumenCartera } from "@/lib/finanzas";
@@ -55,6 +56,8 @@ export default async function Transparencia({ searchParams }: PageProps<"/transp
       </header>
 
       <main className="mx-auto -mt-4 max-w-3xl space-y-8 px-4 pb-16 sm:px-6">
+        <ConsultaEstado />
+
         <section className="tarjeta zocalo zocalo-agua" aria-labelledby="saldo">
           <h2 id="saldo" className="text-lg font-bold">Dinero disponible hoy</h2>
           <p className="num mt-1 text-[2.5rem] leading-tight font-bold text-stone-900">{pesos(saldoTotal)}</p>

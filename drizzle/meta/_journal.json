@@ -64,6 +64,20 @@
       "when": 1794162283922,
       "tag": "0008_permiso_tesoreria_junta",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794226353623,
+      "tag": "0009_junta",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794227149321,
+      "tag": "0010_novedad_archivo",
+      "breakpoints": true
     }
   ]
 }

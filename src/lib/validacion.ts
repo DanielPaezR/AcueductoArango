@@ -176,6 +176,17 @@ export const mantenimientoSchema = z.object({
     .transform((v) => v ?? null),
 });
 
+export const novedadSchema = z.object({
+  id: z.uuid(),
+  titulo: z.string().trim().min(3, "Escriba el título").max(160),
+  descripcion: txt(5000),
+  categoria: z.enum(["vias", "puentes", "ambiental", "limpieza", "infraestructura", "social", "otro"]).default("otro"),
+  lat: z.number().min(-90).max(90).nullish().transform((v) => v ?? null),
+  lng: z.number().min(-180).max(180).nullish().transform((v) => v ?? null),
+  estado: z.enum(["pendiente", "en_ejecucion", "realizado"]).default("pendiente"),
+});
+export type NovedadInput = z.input<typeof novedadSchema>;
+
 export type ElementoInput = z.input<typeof elementoSchema>;
 export type TramoInput = z.input<typeof tramoSchema>;
 export type MantenimientoInput = z.input<typeof mantenimientoSchema>;

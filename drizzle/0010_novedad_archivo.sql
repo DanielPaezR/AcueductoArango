@@ -1,0 +1,1 @@
+ALTER TABLE "novedades" ADD COLUMN "archivado_en" timestamp with time zone;

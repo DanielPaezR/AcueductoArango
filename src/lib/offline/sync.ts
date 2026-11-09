@@ -117,7 +117,7 @@ async function subirDatos(r: ResultadoSync): Promise<void> {
   }
 
   // Red del acueducto y mantenimientos: primero puntos y tuberías, luego arreglos que los referencian
-  const orden = { elemento: 0, tramo: 1, mantenimiento: 2 } as const;
+  const orden = { elemento: 0, tramo: 1, mantenimiento: 2, novedad: 3 } as const;
   const ops = (await dbLocal.operaciones.toArray()).sort(
     (a, b) => orden[a.tipo] - orden[b.tipo] || a.guardadoEn - b.guardadoEn,
   );

@@ -1,7 +1,12 @@
 "use client";
 
 import {
+  BookOpen,
+  ChartPie,
   ClipboardList,
+  FileText,
+  MapPinned,
+  Settings,
   History,
   Droplets,
   Globe,
@@ -32,4 +37,9 @@ export const ICONOS: Record<NombreIcono, LucideIcon> = {
   reportes: ChartColumn,
   usuarios: ShieldUser,
   bitacora: History,
+  poblacion: ChartPie,
+  novedades: MapPinned,
+  libros: BookOpen,
+  documentos: FileText,
+  configuracion: Settings,
 };

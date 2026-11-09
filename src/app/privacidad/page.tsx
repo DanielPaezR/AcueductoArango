@@ -40,7 +40,7 @@ export default function Privacidad() {
       <ul>
         <li>
           <strong>Censo de viviendas (visita casa a casa):</strong> nombre, edad, número de cédula y teléfono de la cabeza de familia; nombre, edad y,
-          si se da, documento de los demás miembros; nombre del predio o referencia; si la casa es propia o alquilada; principal sustento; si tiene
+          si se da, documento de los demás miembros; si alguna persona tiene discapacidad (pregunta voluntaria); nombre del predio o referencia; si la casa es propia o alquilada; principal sustento; si tiene
           servicio y matrícula del acueducto; y, si la casa es alquilada, nombre, cédula y teléfono del titular de la matrícula.
         </li>
         <li><strong>Ubicación de la vivienda:</strong> coordenadas GPS y fotografías de la fachada, si la familia lo permite.</li>
@@ -57,8 +57,11 @@ export default function Privacidad() {
         </li>
       </ul>
       <p>
-        <strong>No pedimos datos sensibles</strong> (salud, origen étnico, orientación política o religiosa, datos biométricos, etc.). Si en algún
-        caso fuera necesario, se le informará que es <strong>voluntario</strong> responder y se pedirá autorización expresa (Ley 1581, arts. 5 y 6).
+        <strong>Dato sensible: discapacidad.</strong> La única información sensible que se pregunta es si alguna persona del hogar tiene
+        discapacidad, y opcionalmente cuál. Es <strong>voluntario</strong> responder: el encuestador lo informa antes y nadie está obligado
+        (Ley 1581, arts. 5 y 6). Se usa solo para la caracterización de la población y para priorizar ayudas e inclusión; se muestra únicamente en
+        cifras agregadas y en los listados internos de la Junta, y <strong>nunca se publica</strong>. No pedimos otros datos sensibles (origen
+        étnico, orientación política o religiosa, datos biométricos, etc.).
       </p>
 
       <h2>4. Para qué usamos los datos (finalidades)</h2>
@@ -66,7 +69,7 @@ export default function Privacidad() {
         <li>Conocer quién vive en la vereda y dónde, para la planeación y gestión comunitaria de la Junta.</li>
         <li>Prestar, mantener y cobrar el servicio de acueducto comunitario; llevar el estado de cuenta de cada suscriptor y contactarlo sobre cobros, cortes, daños y reparaciones.</li>
         <li>Organizar la entrega de ayudas, la participación en proyectos y las convocatorias de la Junta.</li>
-        <li>Elaborar estadísticas e informes agregados (sin identificar personas) para la asamblea, la Alcaldía u otras entidades.</li>
+        <li>Caracterizar la población (hogares, grupos de edad, personas con discapacidad) y elaborar estadísticas e informes agregados, sin identificar personas, para la asamblea, la Alcaldía u otras entidades.</li>
         <li>Rendir cuentas a la comunidad: la página pública de transparencia muestra cifras agregadas y, en la consulta por cédula, solo el nombre abreviado, la matrícula y el estado de pago del titular.</li>
         <li>Cumplir obligaciones legales, contables y requerimientos de autoridades competentes.</li>
         <li>Garantizar la seguridad del sistema y la trazabilidad de las acciones de sus usuarios.</li>

@@ -2,6 +2,7 @@ import { NAV, FASE_ACTUAL } from "@/components/nav";
 import { Shell } from "@/components/shell";
 import { puede, ROLES, type Rol } from "@/lib/permisos";
 import { redirect } from "next/navigation";
+import { modulos } from "@/lib/config";
 import { VERSION_TERMINOS } from "@/lib/legal";
 import { requerirUsuario } from "@/lib/session";
 
@@ -9,8 +10,13 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const u = await requerirUsuario();
   // Nadie usa el sistema sin aceptar los términos y el compromiso de confidencialidad vigentes
   if (u.terminosVersion !== VERSION_TERMINOS) redirect("/aceptar");
+  const m = await modulos();
   const items = NAV.filter(
-    (i) => (!i.seccion || puede(u, i.seccion, "ver")) && (!i.secciones || i.secciones.some((x) => puede(u, x, "ver"))),
+    (i) =>
+      (!i.seccion || puede(u, i.seccion, "ver")) &&
+      (!i.secciones || i.secciones.some((x) => puede(u, x, "ver"))) &&
+      (!i.modulo || m[i.modulo]) &&
+      (!i.soloSuperadmin || u.rol === "superadmin"),
   );
   return (
     <Shell
@@ -19,7 +25,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       accionPrincipal={
         puede(u, "censo", "crear")
           ? { href: "/viviendas/nueva", label: "Registrar" }
-          : puede(u, "mantenimientos", "crear")
+          : m.acueducto && puede(u, "mantenimientos", "crear")
             ? { href: "/mantenimientos/nuevo", label: "Arreglo" }
             : null
       }

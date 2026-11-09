@@ -8,3 +8,4 @@ export const MapaSelector = dynamic(() => import("./selector"), { ssr: false, lo
 export const MapaPunto = dynamic(() => import("./punto"), { ssr: false, loading: Cargando });
 export const MapaUsuarios = dynamic(() => import("./usuarios"), { ssr: false, loading: Cargando });
 export const MapaRed = dynamic(() => import("./red"), { ssr: false, loading: Cargando });
+export const MapaNovedades = dynamic(() => import("./novedades"), { ssr: false, loading: Cargando });

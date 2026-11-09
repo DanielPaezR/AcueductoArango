@@ -219,6 +219,7 @@ export default async function FichaVivienda({ params }: PageProps<"/viviendas/[i
                         p.esJefeHogar ? "Cabeza de familia" : null,
                         e !== null ? `${e} años` : null,
                         p.numeroDocumento ? `Doc. ${p.numeroDocumento}` : null,
+                        p.discapacidad ? `Discapacidad${p.tipoDiscapacidad ? `: ${p.tipoDiscapacidad}` : ""}` : null,
                       ]
                         .filter(Boolean)
                         .join(" · ")}

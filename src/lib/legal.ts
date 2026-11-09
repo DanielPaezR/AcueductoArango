@@ -19,15 +19,16 @@ export function datosResponsable() {
 }
 
 /** Cambiar estas versiones obliga a volver a aceptar (usuarios) y queda registrada en cada autorización. */
-export const VERSION_POLITICA = "1.0-2026-11";
+export const VERSION_POLITICA = "1.1-2026-11";
 export const VERSION_TERMINOS = "1.0-2026-11";
-export const VIGENCIA = "8 de noviembre de 2026";
+export const VIGENCIA = "9 de noviembre de 2026";
 
 /** Texto corto que se lee a la familia en cada visita (aviso de privacidad, Decreto 1377 de 2013, art. 14). */
 export function avisoVisita(responsable = datosResponsable().nombre) {
   return [
     `${responsable} recoge estos datos para el censo de la vereda, la prestación y el cobro del servicio de acueducto, la entrega de ayudas y la gestión comunitaria.`,
     "Responder es voluntario. Si hay menores de edad en la casa, usted como su representante autoriza sus datos, que solo se usan en su beneficio.",
+    "La pregunta sobre discapacidad es un dato sensible: no está obligado a responderla. Si responde, se usa solo para conocer la población y priorizar ayudas, y nunca se publica.",
     "Los datos se guardan en servidores de proveedores en el exterior (Estados Unidos) con medidas de seguridad, y no se venden ni se entregan a terceros sin su permiso, salvo orden de autoridad.",
     "Usted puede conocer, corregir, actualizar o pedir que se borren sus datos, y revocar este permiso, ante la presidencia de la Junta. La política completa está en la página /privacidad.",
   ];

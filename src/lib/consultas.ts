@@ -119,6 +119,8 @@ export async function resumenInicio() {
           select 1 from personas p where p.vivienda_id = viviendas.id and p.deleted_at is null))::int`,
         personas: sql<number>`(select count(*)::int from personas p join viviendas v2 on v2.id = p.vivienda_id
           where p.deleted_at is null and v2.deleted_at is null)`,
+        conDiscapacidad: sql<number>`(select count(*)::int from personas p join viviendas v2 on v2.id = p.vivienda_id
+          where p.deleted_at is null and v2.deleted_at is null and p.discapacidad)`,
       })
       .from(V)
       .where(isNull(V.deletedAt)),

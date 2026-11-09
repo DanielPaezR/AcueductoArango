@@ -38,6 +38,13 @@ transparencia** donde cualquier persona ve las cuentas y cada suscriptor consult
 | Cobros del mes | `/facturacion` | Tarifa con historial, generación de la mensualidad, cartera, cuentas de cobro imprimibles. |
 | Tesorería | `/tesoreria` | Dos fondos separados (**Acueducto** y **Junta**), cada uno con sus cuentas y categorías; ingresos y gastos con soporte, **aprobación de la presidencia**, anulaciones visibles. Los pagos de suscriptores y facturas de arreglos solo van a cuentas del acueducto. |
 | Ayudas y proyectos | `/ayudas` | Proyectos y beneficiarios por casa. |
+| Población | `/poblacion` | Caracterización: hogares, habitantes, grupos de edad (infantes, niños, adolescentes, jóvenes, adultos, mayores), discapacidad; cabezas de familia A–Z y habitantes por núcleo familiar; filtros; imprimir y Excel. |
+| Novedades y obras | `/novedades` | Derrumbes, convites, arreglos de vías, proyectos: título, sitio en el mapa, detalles y fotos. Pendiente → en ejecución → realizado → archivado (historial). Funciona sin señal y se ve como capa en el mapa de la vereda. |
+| Libro de contabilidad | `/libros/contabilidad` | Libro de la Junta como el de papel: N.º, fecha, concepto, comprobante, ingresos, egresos, saldo. Clic derecho (o toque largo / ⋯): ver comprobante, historial, corregir, anular. Cada creación, corrección, anulación y comprobante queda con nombre, cargo y fecha. Solo presidencia y tesorería editan. Imprimible con firmas. |
+| Libro de actas | `/libros/actas` | Actas de asamblea y junta directiva con foto o PDF del acta firmada; imprimible. |
+| Libro de inventario | `/libros/inventario` | Bienes de la Junta: cantidad, estado, ubicación, valor, fotos; imprimible. |
+| Documentos | `/documentos` | Estatutos, reglamento interno y reglamento del fondo rotatorio (PDF o fotos de las páginas). |
+| Configuración | `/configuracion` | (Superadmin) Encender o apagar el módulo del acueducto. Apagado oculta red, arreglos, suscriptores, cobros, tesorería del acueducto y la consulta por cédula; **no borra datos**. |
 | Reportes | `/reportes` | Población por edades y sectores, 6 reportes en Excel, respaldo completo (superadmin). |
 | Usuarios / Bitácora | `/usuarios`, `/bitacora` | Gestión de usuarios y permisos; registro inmodificable de todas las acciones. |
 | Página pública | `/transparencia` | Saldo del acueducto y de la Junta en tiempo real (separados), recaudo, pagos agregados (sin nombres), movimientos con soportes, consulta por cédula, compartir por WhatsApp/QR. |
@@ -57,12 +64,19 @@ crear un usuario se aplica la plantilla de su rol; el superadmin puede ajustarla
 | Admin (presidencia) | Censo, mapas, red, mantenimientos, suscriptores, cobros, tesorería **con aprobación**, ayudas, reportes. |
 | Fontanero | Mapa, red del acueducto, mantenimientos; ve suscriptores. |
 | Encuestador | Registrar y editar viviendas; ver el mapa. |
-| Tesorero | Cobros y pagos; registrar movimientos (los aprueba la presidencia); reportes. |
+| Tesorero | Libro de contabilidad (registrar y corregir); cobros y pagos del acueducto; reportes. |
+| Fiscal / veedor (consulta) | Solo ver el libro de contabilidad: comprobantes e historial, sin poder editar. |
 | Suscriptor | Reservado para un portal futuro (hoy se usa la consulta pública por cédula). |
 
 La tesorería tiene **dos secciones de permisos independientes**: *Tesorería del acueducto* y *Tesorería de la
 Junta*. Así el mismo cargo (p. ej. tesorera) puede manejar solo uno de los fondos o ambos; quien no tiene
 acceso a un fondo no ve sus cuentas, no puede registrar ni aprobar en él, ni descargar sus movimientos.
+
+**Libro de contabilidad.** Solo crean, corrigen o anulan quienes tienen el permiso explícito (presidencia y
+tesorería por defecto). Ni siquiera el superadmin edita el libro sin habérselo asignado en su matriz de permisos.
+
+**Documentos en PDF.** Cloudinary bloquea por defecto la entrega de PDF en cuentas gratuitas: en Cloudinary →
+Settings → Security, active *Allow delivery of PDF and ZIP files*. Las fotos de páginas funcionan sin eso.
 
 El campo **cargo** del usuario (p. ej. "Presidenta", "Tesorera") es lo que aparece en la página pública.
 

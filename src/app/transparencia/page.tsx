@@ -7,12 +7,13 @@ import { ConsultaEstado } from "./consulta";
 import { BotonesCompartir } from "@/components/compartir-botones";
 import { urlPublica } from "@/lib/url-publica";
 import { db, schema } from "@/db";
+import { modulos } from "@/lib/config";
 import { FONDOS, nombreMes, pesos, type Fondo } from "@/lib/dinero";
 import { cuentasConSaldo, listarMovimientos, resumenCartera } from "@/lib/finanzas";
 
 export const metadata = {
   title: "Cuentas claras de la vereda Arango",
-  description: "Saldo, recaudo y movimientos del acueducto de la vereda Arango, publicados por la Junta de Acción Comunal.",
+  description: "Saldo, ingresos y gastos de la vereda Arango, publicados por la Junta de Acción Comunal.",
 };
 
 const POR_PAGINA = 30;
@@ -21,7 +22,9 @@ export default async function Transparencia({ searchParams }: PageProps<"/transp
   await connection(); // siempre datos del momento
   const sp = await searchParams;
   const pagina = Math.max(1, Number(sp.pagina) || 1);
-  const fondo: Fondo = sp.fondo === "junta" ? "junta" : "acueducto";
+  const { acueducto: conAcueducto } = await modulos();
+  // Sin el módulo del acueducto, la página pública muestra solo las cuentas de la Junta
+  const fondo: Fondo = !conAcueducto || sp.fondo === "junta" ? "junta" : "acueducto";
 
   const [cuentasTodas, cartera, movimientos, [{ total, porAprobar }]] = await Promise.all([
     cuentasConSaldo(true),
@@ -41,8 +44,9 @@ export default async function Transparencia({ searchParams }: PageProps<"/transp
       const cuentas = cuentasTodas.filter((c) => c.fondo === f);
       return { f, cuentas, saldo: cuentas.reduce((a, c) => a + c.saldo, 0) };
     })
-    .filter((x) => x.f === "acueducto" || x.cuentas.length > 0);
+    .filter((x) => (x.f === "acueducto" ? conAcueducto : !conAcueducto || x.cuentas.length > 0));
   const hayJunta = fondos.some((x) => x.f === "junta");
+  const variosFondos = fondos.length > 1;
   const cuentas = cuentasTodas.filter((c) => c.fondo === fondo);
   const url = await urlPublica();
   const paginas = Math.max(1, Math.ceil(total / POR_PAGINA));
@@ -63,14 +67,14 @@ export default async function Transparencia({ searchParams }: PageProps<"/transp
           <p className="font-semibold text-marca-100">JAC Arango · Vereda Arango · Concepción, Antioquia</p>
           <h1 className="mt-2 text-[2rem] leading-tight font-bold text-white">Cuentas claras</h1>
           <p className="mt-2 text-lg text-marca-100">
-            La plata del acueducto{hayJunta ? " y de la Junta" : ""} es de todos. Aquí se publica, en tiempo real, cuánto hay, cuánto
+            {conAcueducto ? `La plata del acueducto${hayJunta ? " y de la Junta" : ""}` : "La plata de la Junta"} es de todos. Aquí se publica, en tiempo real, cuánto hay, cuánto
             entra y en qué se gasta.
           </p>
         </div>
       </header>
 
       <main className="mx-auto -mt-4 max-w-3xl space-y-8 px-4 pb-16 sm:px-6">
-        <ConsultaEstado />
+        {conAcueducto && <ConsultaEstado />}
 
         <section aria-labelledby="saldo">
           <h2 id="saldo" className="mb-3 text-lg font-bold">Dinero disponible hoy</h2>
@@ -98,9 +102,14 @@ export default async function Transparencia({ searchParams }: PageProps<"/transp
               </div>
             ))}
           </div>
-          <p className="mt-2 text-sm text-stone-600">Actualizado: {ahora} · Son plata separada: la del acueducto solo se usa en el acueducto.</p>
+          <p className="mt-2 text-sm text-stone-600">
+            Actualizado: {ahora}
+            {variosFondos && " · Son plata separada: la del acueducto solo se usa en el acueducto."}
+          </p>
         </section>
 
+        {conAcueducto && (
+          <>
         <h2 className="border-t border-stone-200 pt-6 text-xl font-bold">El acueducto</h2>
 
         <section className="tarjeta" aria-labelledby="mes">
@@ -147,10 +156,12 @@ export default async function Transparencia({ searchParams }: PageProps<"/transp
             )}
           </p>
         </section>
+          </>
+        )}
 
         <section aria-labelledby="movimientos">
           <h2 id="movimientos" className="text-lg font-bold">Movimientos</h2>
-          {hayJunta && (
+          {variosFondos && (
             <nav className="my-3 grid grid-cols-2 gap-1 rounded-xl bg-stone-200 p-1" aria-label="Fondo">
               {fondos.map((x) => (
                 <Link
@@ -194,7 +205,11 @@ export default async function Transparencia({ searchParams }: PageProps<"/transp
           <h2 id="compartir" className="mb-3 text-lg font-bold">Compartir con los vecinos</h2>
           <BotonesCompartir
             url={url}
-            mensaje={`Cuentas claras de la vereda Arango: saldo del acueducto y de la Junta, gastos con facturas y consulta del estado de cuenta con la cédula. ${url}`}
+            mensaje={
+              conAcueducto
+                ? `Cuentas claras de la vereda Arango: saldo del acueducto y de la Junta, gastos con facturas y consulta del estado de cuenta con la cédula. ${url}`
+                : `Cuentas claras de la Junta de Acción Comunal de la vereda Arango: saldo, ingresos y gastos con sus comprobantes. ${url}`
+            }
           />
         </section>
 

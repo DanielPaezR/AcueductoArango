@@ -3,7 +3,9 @@ import Link from "next/link";
 import { desc, isNull } from "drizzle-orm";
 import { MapaUsuarios } from "@/components/mapa/dinamicos";
 import { db, schema } from "@/db";
+import { modulos } from "@/lib/config";
 import { listarSectores, puntosMapa } from "@/lib/consultas";
+import { puntosNovedades } from "@/lib/consultas-novedades";
 import { puede } from "@/lib/permisos";
 import { requerirPermiso } from "@/lib/session";
 
@@ -11,12 +13,14 @@ export const metadata = { title: "Mapa de la vereda" };
 
 export default async function Mapa() {
   const u = await requerirPermiso("mapa_usuarios", "ver");
-  const [puntos, sectores, proyectos] = await Promise.all([
+  const [puntos, sectores, proyectos, novedades, m] = await Promise.all([
     puntosMapa(),
     listarSectores(),
     puede(u, "ayudas", "ver")
       ? db.select({ id: schema.proyectos.id, nombre: schema.proyectos.nombre }).from(schema.proyectos).where(isNull(schema.proyectos.deletedAt)).orderBy(desc(schema.proyectos.createdAt))
       : Promise.resolve([]),
+    puede(u, "novedades", "ver") ? puntosNovedades() : Promise.resolve([]),
+    modulos(),
   ]);
   return (
     <div className="-mx-4 -mt-5 -mb-28 flex h-[calc(100dvh-62px-64px)] flex-col sm:-mx-6 lg:-mx-10 lg:-mt-8 lg:-mb-12 lg:h-dvh">
@@ -28,7 +32,7 @@ export default async function Mapa() {
           </Link>}
       </div>
       <div className="min-h-0 flex-1">
-        <MapaUsuarios puntos={puntos} proyectos={proyectos} sectores={sectores.map((s) => ({ id: s.id, nombre: s.nombre, color: s.color }))} />
+        <MapaUsuarios puntos={puntos} proyectos={proyectos} novedades={novedades} conAcueducto={m.acueducto} sectores={sectores.map((s) => ({ id: s.id, nombre: s.nombre, color: s.color }))} />
       </div>
     </div>
   );

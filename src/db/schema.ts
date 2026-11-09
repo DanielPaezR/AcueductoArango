@@ -39,6 +39,7 @@ export const rolEnum = pgEnum("rol", [
   "encuestador",
   "tesorero",
   "suscriptor",
+  "consulta", // fiscal o veedor: solo lectura del área contable
 ]);
 
 const timestamps = {
@@ -489,10 +490,130 @@ export const movimientos = pgTable(
     cargoAprobacion: varchar("cargo_aprobacion", { length: 60 }),
     aprobadoEn: timestamp("aprobado_en", { withTimezone: true }),
     motivo: text("motivo"), // de rechazo o anulación
+    /** Consecutivo del asiento (N.º en el libro de contabilidad). */
+    numero: serial("numero").notNull(),
+    /** Comprobante físico (recibo, factura) referenciado en el libro. */
+    comprobante: varchar("comprobante", { length: 40 }),
+    actualizadoPor: uuid("actualizado_por").references(() => usuarios.id),
+    actualizadoEn: timestamp("actualizado_en", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [index("movimientos_cuenta_idx").on(t.cuentaId), index("movimientos_fecha_idx").on(t.fecha)],
 );
+
+/** Historial de cada asiento contable: quién lo creó, editó o anuló, cuándo, y cómo estaba antes y después. */
+export const movimientosHistorial = pgTable(
+  "movimientos_historial",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    movimientoId: uuid("movimiento_id")
+      .notNull()
+      .references(() => movimientos.id),
+    accion: varchar("accion", { length: 12 }).notNull(), // crear, editar, anular, aprobar, rechazar
+    usuarioId: uuid("usuario_id").references(() => usuarios.id),
+    usuarioNombre: varchar("usuario_nombre", { length: 120 }),
+    cargo: varchar("cargo", { length: 60 }),
+    antes: jsonb("antes"),
+    despues: jsonb("despues"),
+    motivo: text("motivo"),
+    fecha: timestamp("fecha", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index("mov_historial_mov_idx").on(t.movimientoId)],
+);
+
+/* ------------------------------------------------------------------ */
+/* Libros de la Junta: inventario y actas                              */
+/* ------------------------------------------------------------------ */
+
+export const inventario = pgTable("inventario", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  codigo: varchar("codigo", { length: 20 }),
+  nombre: varchar("nombre", { length: 160 }).notNull(),
+  descripcion: text("descripcion"),
+  cantidad: integer("cantidad").notNull().default(1),
+  estado: varchar("estado", { length: 20 }).notNull().default("bueno"), // bueno, regular, malo, dado_de_baja
+  ubicacion: varchar("ubicacion", { length: 160 }), // dónde está o quién lo tiene
+  fechaAdquisicion: date("fecha_adquisicion"),
+  valor: numeric("valor", { precision: 14, scale: 2 }),
+  procedencia: varchar("procedencia", { length: 120 }), // compra, donación de…
+  observaciones: text("observaciones"),
+  createdBy: uuid("created_by").references(() => usuarios.id),
+  updatedBy: uuid("updated_by").references(() => usuarios.id),
+  ...timestamps,
+  ...softDelete,
+});
+
+export const actas = pgTable("actas", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  numero: varchar("numero", { length: 20 }).notNull(),
+  tipo: varchar("tipo", { length: 30 }).notNull().default("asamblea"), // asamblea, asamblea_extraordinaria, junta_directiva, otra
+  fecha: date("fecha").notNull(),
+  horaInicio: varchar("hora_inicio", { length: 5 }),
+  horaFin: varchar("hora_fin", { length: 5 }),
+  lugar: varchar("lugar", { length: 160 }),
+  asistentes: integer("asistentes"),
+  quorum: boolean("quorum"),
+  ordenDelDia: text("orden_del_dia"),
+  desarrollo: text("desarrollo"),
+  decisiones: text("decisiones"),
+  presidente: varchar("presidente", { length: 120 }), // quien presidió
+  secretario: varchar("secretario", { length: 120 }),
+  createdBy: uuid("created_by").references(() => usuarios.id),
+  updatedBy: uuid("updated_by").references(() => usuarios.id),
+  ...timestamps,
+  ...softDelete,
+});
+
+/* ------------------------------------------------------------------ */
+/* Novedades y obras comunitarias (en el mapa)                         */
+/* ------------------------------------------------------------------ */
+
+export const novedades = pgTable(
+  "novedades",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    titulo: varchar("titulo", { length: 160 }).notNull(),
+    descripcion: text("descripcion"),
+    categoria: varchar("categoria", { length: 30 }).notNull().default("otro"), // vias, puentes, ambiental, limpieza, infraestructura, social, otro
+    lat: doublePrecision("lat"),
+    lng: doublePrecision("lng"),
+    estado: varchar("estado", { length: 20 }).notNull().default("pendiente"), // pendiente, en_ejecucion, realizado
+    fechaRealizado: date("fecha_realizado"),
+    archivado: boolean("archivado").notNull().default(false),
+    archivadoEn: timestamp("archivado_en", { withTimezone: true }),
+    createdBy: uuid("created_by").references(() => usuarios.id),
+    updatedBy: uuid("updated_by").references(() => usuarios.id),
+    ...timestamps,
+    ...softDelete,
+  },
+  (t) => [index("novedades_archivado_idx").on(t.archivado)],
+);
+
+/* ------------------------------------------------------------------ */
+/* Documentos institucionales (estatutos, reglamentos…)                */
+/* ------------------------------------------------------------------ */
+
+export const documentos = pgTable("documentos", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  titulo: varchar("titulo", { length: 160 }).notNull(),
+  categoria: varchar("categoria", { length: 30 }).notNull().default("otro"), // estatutos, reglamento, fondo_rotatorio, otro
+  descripcion: text("descripcion"),
+  fechaDocumento: date("fecha_documento"),
+  createdBy: uuid("created_by").references(() => usuarios.id),
+  ...timestamps,
+  ...softDelete,
+});
+
+/* ------------------------------------------------------------------ */
+/* Configuración del sistema (módulos activos, etc.)                   */
+/* ------------------------------------------------------------------ */
+
+export const configuracion = pgTable("configuracion", {
+  clave: varchar("clave", { length: 60 }).primaryKey(),
+  valor: jsonb("valor").notNull(),
+  updatedBy: uuid("updated_by").references(() => usuarios.id),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
 
 /* ------------------------------------------------------------------ */
 /* Adjuntos (Cloudinary) — fotos, facturas, documentos de cualquier    */

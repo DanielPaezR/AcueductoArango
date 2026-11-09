@@ -15,11 +15,15 @@ const SECCION_POR_ENTIDAD: Record<string, Seccion> = {
   compra: "mantenimientos",
   pago: "facturacion",
   movimiento: "tesoreria",
+  acta: "libro_actas",
+  inventario: "libro_inventario",
+  novedad: "novedades",
+  documento: "documentos",
   proyecto: "ayudas",
   participacion: "ayudas",
 };
 
-const MAX_BYTES = 10 * 1024 * 1024;
+const MAX_BYTES = 10 * 1024 * 1024; // límite del plan gratuito de Cloudinary
 const UUID = /^[0-9a-f-]{36}$/i;
 
 export async function POST(req: Request) {
@@ -81,5 +85,16 @@ export async function POST(req: Request) {
       .where(and(eq(schema.viviendas.id, entidadId), isNull(schema.viviendas.fotoPrincipalUrl)));
   }
   await auditar(u.id, "adjuntar", entidad, entidadId, { adjunto: id, tipo });
+  if (entidad === "movimiento") {
+    const yo = await db.query.usuarios.findFirst({ where: eq(schema.usuarios.id, u.id), columns: { nombre: true, cargo: true } });
+    await db.insert(schema.movimientosHistorial).values({
+      movimientoId: entidadId,
+      accion: "adjuntar",
+      usuarioId: u.id,
+      usuarioNombre: yo?.nombre ?? u.nombre,
+      cargo: yo?.cargo ?? null,
+      despues: { comprobante: subida.secure_url },
+    });
+  }
   return Response.json({ ok: true, url: privado ? null : subida.secure_url });
 }

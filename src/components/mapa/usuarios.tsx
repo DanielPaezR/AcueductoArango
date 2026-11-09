@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CircleMarker, MapContainer, Popup, useMap } from "react-leaflet";
 import { CENTRO_MUNICIPIO } from "@/lib/opciones";
 import { CapasBase } from "./capas";
+import { MarcadoresNovedad, type PuntoNovedad } from "./novedades";
 
 export type PuntoVivienda = {
   id: string;
@@ -70,15 +71,22 @@ export default function MapaUsuarios({
   puntos,
   sectores,
   proyectos = [],
+  novedades = [],
+  conAcueducto = true,
 }: {
   puntos: PuntoVivienda[];
   sectores: { id: number; nombre: string; color: string | null }[];
   proyectos?: { id: string; nombre: string }[];
+  /** Novedades y obras activas (capa que se puede mostrar u ocultar). */
+  novedades?: PuntoNovedad[];
+  /** Si el módulo del acueducto está activo (filtro y colores por acueducto). */
+  conAcueducto?: boolean;
 }) {
+  const [verNovedades, setVerNovedades] = useState(true);
   const [ayuda, setAyuda] = useState("");
   const [sector, setSector] = useState("");
   const [acueducto, setAcueducto] = useState("");
-  const [colorPor, setColorPor] = useState<"acueducto" | "sector">("acueducto");
+  const [colorPor, setColorPor] = useState<"acueducto" | "sector">(conAcueducto ? "acueducto" : "sector");
   const [q, setQ] = useState("");
 
   const colorSector = useMemo(
@@ -126,11 +134,19 @@ export default function MapaUsuarios({
               <option key={s.id} value={s.id}>{s.nombre}</option>
             ))}
           </select>
-          <select className="input min-h-10 w-auto shrink-0 py-1.5 text-[0.95rem]" aria-label="Acueducto" value={acueducto} onChange={(e) => setAcueducto(e.target.value)}>
-            <option value="">Con y sin acueducto</option>
-            <option value="true">Con acueducto</option>
-            <option value="false">Sin acueducto</option>
-          </select>
+          {novedades.length > 0 && (
+            <label className="flex min-h-10 shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-stone-300 bg-white px-3 text-[0.95rem] font-semibold">
+              <input type="checkbox" className="size-4 accent-marca-700" checked={verNovedades} onChange={(e) => setVerNovedades(e.target.checked)} />
+              Novedades (<span className="num">{novedades.length}</span>)
+            </label>
+          )}
+          {conAcueducto && (
+            <select className="input min-h-10 w-auto shrink-0 py-1.5 text-[0.95rem]" aria-label="Acueducto" value={acueducto} onChange={(e) => setAcueducto(e.target.value)}>
+              <option value="">Con y sin acueducto</option>
+              <option value="true">Con acueducto</option>
+              <option value="false">Sin acueducto</option>
+            </select>
+          )}
           {proyectos.length > 0 && (
             <select className="input min-h-10 w-auto shrink-0 py-1.5 text-[0.95rem]" aria-label="Ayuda recibida" value={ayuda} onChange={(e) => setAyuda(e.target.value)}>
               <option value="">Cualquier ayuda</option>
@@ -140,10 +156,12 @@ export default function MapaUsuarios({
               ))}
             </select>
           )}
-          <select className="input min-h-10 w-auto shrink-0 py-1.5 text-[0.95rem]" aria-label="Colorear por" value={colorPor} onChange={(e) => setColorPor(e.target.value as "acueducto" | "sector")}>
-            <option value="acueducto">Colores: acueducto</option>
-            <option value="sector">Colores: sector</option>
-          </select>
+          {conAcueducto && (
+            <select className="input min-h-10 w-auto shrink-0 py-1.5 text-[0.95rem]" aria-label="Colorear por" value={colorPor} onChange={(e) => setColorPor(e.target.value as "acueducto" | "sector")}>
+              <option value="acueducto">Colores: acueducto</option>
+              <option value="sector">Colores: sector</option>
+            </select>
+          )}
         </div>
       </div>
       <div className="relative isolate flex-1">
@@ -163,7 +181,7 @@ export default function MapaUsuarios({
                   <div className="text-base font-bold text-stone-900">{p.jefe ?? "Sin familia registrada"}</div>
                   <div className="num text-stone-600">{p.codigo}</div>
                   <div className="text-stone-700">
-                    <span className="num">{p.personas}</span> persona(s) · {p.usaAcueducto ? "Con acueducto" : "Sin acueducto"}
+                    <span className="num">{p.personas}</span> persona(s){conAcueducto && <> · {p.usaAcueducto ? "Con acueducto" : "Sin acueducto"}</>}
                   </div>
                   {p.referencia && <div className="text-stone-600">{p.referencia}</div>}
                   <Link href={`/viviendas/${p.id}`} className="inline-block pt-1 font-bold text-marca-700 underline">Ver ficha</Link>
@@ -171,6 +189,7 @@ export default function MapaUsuarios({
               </Popup>
             </CircleMarker>
           ))}
+          {verNovedades && <MarcadoresNovedad puntos={novedades} />}
         </MapContainer>
         <div className="absolute bottom-8 left-3 z-[1000] space-y-1 rounded-lg bg-white px-3 py-2 text-sm font-semibold shadow-[0_2px_8px_rgb(0_0_0/0.3)]">
           {colorPor === "acueducto" ? (

@@ -4,18 +4,29 @@
  * permisos de cada usuario individualmente.
  */
 export const SECCIONES = {
+  // Comunidad y Junta
   censo: "Censo (viviendas y personas)",
-  mapa_usuarios: "Mapa de usuarios",
+  poblacion: "Población (estadísticas y listados)",
+  mapa_usuarios: "Mapa de la vereda",
+  novedades: "Novedades y obras",
   ayudas: "Ayudas y proyectos",
-  acueducto_red: "Mapa del acueducto (red)",
-  mantenimientos: "Mantenimientos y compras",
-  suscriptores: "Suscriptores del acueducto",
-  facturacion: "Cobros y pagos",
-  tesoreria: "Tesorería del acueducto",
-  tesoreria_junta: "Tesorería de la Junta",
+  libro_actas: "Libro de actas",
+  libro_inventario: "Libro de inventario",
+  libro_contable: "Libro de contabilidad (Junta)",
+  documentos: "Documentos (estatutos, reglamentos)",
+  // Acueducto (módulo que se puede desactivar)
+  acueducto_red: "Acueducto: red",
+  mantenimientos: "Acueducto: mantenimientos",
+  suscriptores: "Acueducto: suscriptores",
+  facturacion: "Acueducto: cobros y pagos",
+  tesoreria: "Acueducto: tesorería",
+  // Administración
   reportes: "Reportes y exportaciones",
-  usuarios: "Usuarios del sistema",
+  usuarios: "Usuarios y bitácora",
 } as const;
+
+/** Secciones que pertenecen al módulo de acueducto. */
+export const SECCIONES_ACUEDUCTO = ["acueducto_red", "mantenimientos", "suscriptores", "facturacion", "tesoreria"] as const;
 
 export const ACCIONES = {
   ver: "Ver",
@@ -27,19 +38,11 @@ export const ACCIONES = {
 
 /** Acciones que aplican a cada sección (la matriz solo muestra estas). */
 export function accionesDe(seccion: string): Accion[] {
-  return seccion === "tesoreria" || seccion === "tesoreria_junta" ? ["ver", "crear", "editar", "aprobar"] : ["ver", "crear", "editar", "eliminar"];
-}
-
-/** Cada fondo tiene su propia sección de permisos: el mismo cargo puede manejar uno, otro o ambos. */
-export type FondoPermiso = "acueducto" | "junta";
-export const seccionFondo = (f: FondoPermiso): Seccion => (f === "junta" ? "tesoreria_junta" : "tesoreria");
-
-/** Fondos en los que el usuario puede hacer la acción. */
-export function fondosPermitidos(
-  usuario: { rol: string; permisos: Permisos | Record<string, string[]> },
-  accion: Accion = "ver",
-): FondoPermiso[] {
-  return (["acueducto", "junta"] as const).filter((f) => puede(usuario, seccionFondo(f), accion));
+  if (seccion === "tesoreria") return ["ver", "crear", "editar", "aprobar"];
+  // Un asiento contable no se borra: se corrige (editar) o se anula, y todo queda en su historial
+  if (seccion === "libro_contable") return ["ver", "crear", "editar"];
+  if (seccion === "poblacion") return ["ver"];
+  return ["ver", "crear", "editar", "eliminar"];
 }
 
 export type Seccion = keyof typeof SECCIONES;
@@ -48,30 +51,56 @@ export type Permisos = Partial<Record<Seccion, Accion[]>>;
 
 export const ROLES = {
   superadmin: "Superadministrador",
-  admin: "Administrador",
-  fontanero: "Fontanero",
+  admin: "Presidencia",
+  tesorero: "Tesorería",
   encuestador: "Encuestador",
-  tesorero: "Tesorero",
-  suscriptor: "Suscriptor",
+  consulta: "Fiscal / veedor (consulta)",
+  fontanero: "Fontanero (acueducto)",
+  suscriptor: "Suscriptor (acueducto)",
 } as const;
 export type Rol = keyof typeof ROLES;
 
 const TODO: Accion[] = ["ver", "crear", "editar", "eliminar", "aprobar"];
+const CRUD: Accion[] = ["ver", "crear", "editar", "eliminar"];
 const VCE: Accion[] = ["ver", "crear", "editar"];
 
 export const PLANTILLAS: Record<Rol, Permisos> = {
   superadmin: Object.fromEntries(Object.keys(SECCIONES).map((s) => [s, TODO])) as Permisos,
   admin: {
-    censo: TODO,
+    censo: CRUD,
+    poblacion: ["ver"],
     mapa_usuarios: ["ver"],
-    ayudas: TODO,
-    acueducto_red: TODO,
-    mantenimientos: TODO,
-    suscriptores: TODO,
+    novedades: CRUD,
+    ayudas: CRUD,
+    libro_actas: CRUD,
+    libro_inventario: CRUD,
+    libro_contable: VCE,
+    documentos: CRUD,
+    acueducto_red: CRUD,
+    mantenimientos: CRUD,
+    suscriptores: CRUD,
     facturacion: VCE,
     tesoreria: ["ver", "crear", "editar", "aprobar"],
-    tesoreria_junta: ["ver", "crear", "editar", "aprobar"],
     reportes: ["ver"],
+  },
+  tesorero: {
+    libro_contable: VCE,
+    documentos: ["ver"],
+    suscriptores: ["ver"],
+    facturacion: VCE,
+    tesoreria: ["ver", "crear"],
+    reportes: ["ver"],
+  },
+  encuestador: {
+    censo: VCE,
+    poblacion: ["ver"],
+    mapa_usuarios: ["ver"],
+    novedades: ["ver", "crear"],
+    documentos: ["ver"],
+  },
+  consulta: {
+    libro_contable: ["ver"],
+    tesoreria: ["ver"],
   },
   fontanero: {
     mapa_usuarios: ["ver"],
@@ -79,26 +108,33 @@ export const PLANTILLAS: Record<Rol, Permisos> = {
     mantenimientos: VCE,
     suscriptores: ["ver"],
   },
-  encuestador: {
-    censo: VCE,
-    mapa_usuarios: ["ver"],
-  },
-  tesorero: {
-    suscriptores: ["ver"],
-    facturacion: VCE,
-    tesoreria: ["ver", "crear"],
-    tesoreria_junta: ["ver", "crear"],
-    reportes: ["ver"],
-  },
   suscriptor: {},
 };
+
+/**
+ * La contabilidad de la Junta solo la escriben quienes tienen el permiso explícito (presidencia y tesorería):
+ * el superadministrador puede verla, pero no crear ni editar asientos sin que se le asigne (queda en la bitácora).
+ */
+const SOLO_EXPLICITO: Partial<Record<Seccion, Accion[]>> = { libro_contable: ["crear", "editar", "eliminar", "aprobar"] };
 
 export function puede(
   usuario: { rol: string; permisos: Permisos | Record<string, string[]> },
   seccion: Seccion,
   accion: Accion = "ver",
 ): boolean {
-  if (usuario.rol === "superadmin") return true;
   const acciones = (usuario.permisos as Record<string, string[]>)[seccion] ?? [];
+  if (usuario.rol === "superadmin" && !SOLO_EXPLICITO[seccion]?.includes(accion)) return true;
   return acciones.includes(accion);
+}
+
+/** Cada fondo tiene su propia sección de permisos: acueducto → tesorería; Junta → libro de contabilidad. */
+export type FondoPermiso = "acueducto" | "junta";
+export const seccionFondo = (f: FondoPermiso): Seccion => (f === "junta" ? "libro_contable" : "tesoreria");
+
+/** Fondos en los que el usuario puede hacer la acción. */
+export function fondosPermitidos(
+  usuario: { rol: string; permisos: Permisos | Record<string, string[]> },
+  accion: Accion = "ver",
+): FondoPermiso[] {
+  return (["acueducto", "junta"] as const).filter((f) => puede(usuario, seccionFondo(f), accion));
 }

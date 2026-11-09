@@ -5,16 +5,21 @@ import { FilaMovimiento } from "@/components/lista-movimientos";
 import { pesos, type Fondo } from "@/lib/dinero";
 import { cuentasConSaldo, listarMovimientos } from "@/lib/finanzas";
 import { fondosPermitidos } from "@/lib/permisos";
+import { redirect } from "next/navigation";
+import { modulos } from "@/lib/config";
 import { requerirAlgunFondo } from "@/lib/session";
 import { AccionesMovimiento } from "./acciones";
 
 export const metadata = { title: "Tesorería" };
 
 export default async function Tesoreria({ searchParams }: PageProps<"/tesoreria">) {
-  const { u, fondos: visibles } = await requerirAlgunFondo("ver");
+  const { u, fondos: permitidos } = await requerirAlgunFondo("ver");
   const sp = await searchParams;
-  // Solo los fondos que este usuario puede ver; si pide otro, se le muestra el primero permitido
-  const fondo: Fondo = visibles.includes(sp.fondo as Fondo) ? (sp.fondo as Fondo) : visibles[0];
+  // La plata de la Junta se lleva en el Libro de contabilidad; aquí solo queda el acueducto (si el módulo está activo)
+  const m = await modulos();
+  const visibles = permitidos.filter((f) => f === "acueducto" && m.acueducto);
+  if (!visibles.length || sp.fondo === "junta") redirect("/libros/contabilidad");
+  const fondo: Fondo = visibles[0];
   const puedeAprobar = fondosPermitidos(u, "aprobar").includes(fondo);
   const puedeCrear = fondosPermitidos(u, "crear").includes(fondo);
   const [todas, porAprobarTodos, recientes] = await Promise.all([
@@ -24,7 +29,7 @@ export default async function Tesoreria({ searchParams }: PageProps<"/tesoreria"
   ]);
   const cuentas = todas.filter((c) => c.fondo === fondo);
   const porAprobar = porAprobarTodos.filter((m) => m.fondo === fondo);
-  const titulo = visibles.length > 1 ? "Tesorería" : fondo === "acueducto" ? "Tesorería del acueducto" : "Tesorería de la Junta";
+  const titulo = "Tesorería del acueducto";
   const pendientesDe = (f: Fondo) => porAprobarTodos.filter((m) => m.fondo === f).length;
   const total = cuentas.filter((c) => c.activa).reduce((a, c) => a + c.saldo, 0);
 

@@ -77,7 +77,14 @@ export function Shell({
 
   const lista = (
     <nav className="flex flex-col gap-0.5 p-3" aria-label="Secciones">
-      {items.filter(disponible).map(enlace)}
+      {items.filter(disponible).map((i, k, lista) => (
+        <div key={i.href} className="contents">
+          {i.grupo && i.grupo !== lista[k - 1]?.grupo && (
+            <p className="px-3 pt-4 pb-1 text-xs font-bold tracking-wide text-marca-100/70 uppercase">{i.grupo}</p>
+          )}
+          {enlace(i)}
+        </div>
+      ))}
       {proximos.length > 0 && (
         <div className="mt-5 border-t border-white/10 pt-4">
           <p className="px-3 pb-1.5 text-sm font-semibold text-marca-100/70">En construcción</p>
@@ -117,12 +124,12 @@ export function Shell({
   );
 
   // Barra inferior del celular: las tareas de campo, al alcance del pulgar
-  const preferidas = ["/", "/mapa", "/viviendas", "/acueducto", "/mantenimientos"];
+  const preferidas = ["/", "/mapa", "/viviendas", "/novedades", "/acueducto", "/mantenimientos", "/libros"];
   const tabs = preferidas
     .map((h) => items.find((i) => i.href === h && disponible(i)))
     .filter((i): i is ItemNav => Boolean(i))
     .slice(0, accionPrincipal ? 3 : 4);
-  const CORTO: Record<string, string> = { "/mapa": "Mapa", "/acueducto": "Red", "/mantenimientos": "Arreglos" };
+  const CORTO: Record<string, string> = { "/mapa": "Mapa", "/acueducto": "Red", "/mantenimientos": "Arreglos", "/novedades": "Novedades", "/libros": "Libros" };
 
   return (
     <div className="flex min-h-dvh">

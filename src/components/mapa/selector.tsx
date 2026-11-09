@@ -39,16 +39,22 @@ export default function MapaSelector({
   precision,
   onChange,
   iconoHtml,
+  alfiler = false,
 }: {
   pos: [number, number] | null;
   precision?: number | null;
   onChange: (p: [number, number]) => void;
   /** SVG del marcador; por defecto, la casa. */
   iconoHtml?: string;
+  /** El icono es un alfiler (la punta abajo marca el sitio) en vez de un símbolo centrado. */
+  alfiler?: boolean;
 }) {
   const icono = useMemo(
-    () => (iconoHtml ? L.divIcon({ className: "", html: iconoHtml, iconSize: [30, 30], iconAnchor: [15, 15] }) : iconoCasa),
-    [iconoHtml],
+    () =>
+      iconoHtml
+        ? L.divIcon({ className: "", html: iconoHtml, iconSize: alfiler ? [30, 38] : [30, 30], iconAnchor: alfiler ? [15, 36] : [15, 15] })
+        : iconoCasa,
+    [iconoHtml, alfiler],
   );
   return (
     <MapContainer center={pos ?? CENTRO_MUNICIPIO} zoom={pos ? 18 : 14} className="h-72 w-full rounded-lg" scrollWheelZoom>

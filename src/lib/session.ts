@@ -5,7 +5,7 @@ import { cache } from "react";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
-import { fondosPermitidos, puede, type Accion, type FondoPermiso, type Seccion, type Permisos } from "./permisos";
+import { fondosPermitidos, puede, SECCIONES_ACUEDUCTO, type Accion, type FondoPermiso, type Seccion, type Permisos } from "./permisos";
 
 export const SESSION_COOKIE = "vereda_session";
 const DURACION_DIAS = 30; // larga, porque en campo no siempre hay señal para volver a entrar
@@ -82,6 +82,11 @@ export async function requerirUsuario() {
 
 export async function requerirPermiso(seccion: Seccion, accion: Accion = "ver") {
   const u = await requerirUsuario();
+  // Las secciones del acueducto no existen mientras el módulo esté apagado
+  if ((SECCIONES_ACUEDUCTO as readonly string[]).includes(seccion)) {
+    const { modulos } = await import("./config");
+    if (!(await modulos()).acueducto) redirect("/");
+  }
   if (!puede(u, seccion, accion)) redirect("/sin-acceso");
   return u;
 }

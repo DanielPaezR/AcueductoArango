@@ -24,6 +24,12 @@ const TABLAS: [string, string][] = [
   ["pagos", "select * from pagos"],
   ["cuentas", "select * from cuentas"],
   ["movimientos", "select * from movimientos"],
+  ["movimientos_historial", "select id, movimiento_id, accion, usuario_id, usuario_nombre, cargo, antes::text, despues::text, motivo, fecha from movimientos_historial"],
+  ["actas", "select * from actas"],
+  ["inventario", "select * from inventario"],
+  ["novedades", "select * from novedades"],
+  ["documentos", "select * from documentos"],
+  ["configuracion", "select clave, valor::text, updated_by, updated_at from configuracion"],
   ["adjuntos", "select * from adjuntos"],
   ["auditoria", "select id, usuario_id, accion, entidad, entidad_id, datos::text, fecha from auditoria"],
 ];

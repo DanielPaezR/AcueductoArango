@@ -25,6 +25,12 @@ export function fechaCorta(iso: string | null | undefined) {
   return `${d} ${MESES[m - 1].slice(0, 3)} ${y}`;
 }
 
+export function fechaLarga(iso: string | null | undefined) {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-").map(Number);
+  return `${d} de ${MESES[m - 1]} de ${y}`;
+}
+
 export const FONDOS = { acueducto: "Acueducto", junta: "Junta de Acción Comunal" } as const;
 export type Fondo = keyof typeof FONDOS;
 

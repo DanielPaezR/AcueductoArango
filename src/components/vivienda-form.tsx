@@ -70,6 +70,25 @@ function EdadInput({ p, onChange }: { p: PersonaInput; onChange: (p: PersonaInpu
   );
 }
 
+/* ---------- discapacidad (dato sensible, voluntario) ---------- */
+
+function Discapacidad({ p, onChange, compacto = false }: { p: PersonaInput; onChange: (p: PersonaInput) => void; compacto?: boolean }) {
+  return (
+    <div className="space-y-2">
+      <label className={compacto ? "label" : "label"}>¿Tiene alguna discapacidad? (voluntario)</label>
+      <SiNo value={p.discapacidad ?? null} onChange={(x) => onChange({ ...p, discapacidad: x ?? false, tipoDiscapacidad: x ? p.tipoDiscapacidad : null })} />
+      {p.discapacidad && (
+        <input
+          className="input"
+          placeholder="¿Cuál? (opcional) Ej: física, visual, auditiva, cognitiva"
+          value={p.tipoDiscapacidad ?? ""}
+          onChange={(e) => onChange({ ...p, tipoDiscapacidad: e.target.value })}
+        />
+      )}
+    </div>
+  );
+}
+
 /* ---------- formulario principal ---------- */
 
 export function ViviendaForm({
@@ -349,6 +368,7 @@ export function ViviendaForm({
             <input className="input" inputMode="tel" value={jefe.telefono ?? ""} onChange={(e) => setJ("telefono", e.target.value)} />
           </Campo>
         </div>
+        <Discapacidad p={jefe} onChange={setJefe} />
       </Seccion>
 
       {/* 5, 6, 8 La casa */}
@@ -406,6 +426,7 @@ export function ViviendaForm({
                 />
               </div>
             </div>
+            <Discapacidad p={m} onChange={(np) => setM(m.id, np)} compacto />
           </div>
         ))}
         <button type="button" className="btn-secundario w-full" onClick={() => setMiembros((xs) => [...xs, nuevaPersona(false)])}>

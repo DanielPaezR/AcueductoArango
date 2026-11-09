@@ -14,7 +14,7 @@ export type ViviendaPendiente = {
 };
 
 /** Otros registros de campo (red del acueducto y mantenimientos) esperando subir. */
-export type TipoOperacion = "elemento" | "tramo" | "mantenimiento";
+export type TipoOperacion = "elemento" | "tramo" | "mantenimiento" | "novedad";
 export type OperacionPendiente = {
   id: string; // = id del registro
   tipo: TipoOperacion;

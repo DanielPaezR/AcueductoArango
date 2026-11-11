@@ -1,4 +1,4 @@
-import { ChevronLeft, Droplets, MapPin, Navigation, Pencil, Phone, TriangleAlert } from "lucide-react";
+import { ChevronLeft, ClipboardClock, Droplets, MapPin, Navigation, Pencil, Phone, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { zocaloVivienda } from "@/components/fila-vivienda";
@@ -11,7 +11,7 @@ import { obtenerVivienda, viviendasCercanas } from "@/lib/consultas";
 import { mantenimientosDe } from "@/lib/consultas-red";
 import { HistorialArreglos } from "@/components/historial-arreglos";
 import { miniatura } from "@/lib/imagenes";
-import { edadPersona, ESTADO_VIVIENDA_LABEL } from "@/lib/opciones";
+import { edadPersona, ESTADO_VIVIENDA_LABEL, MOTIVOS_PENDIENTE, type MotivoPendiente } from "@/lib/opciones";
 import { puede } from "@/lib/permisos";
 import { requerirPermiso } from "@/lib/session";
 import { EliminarVivienda, SuprimirDatos } from "./eliminar";
@@ -72,7 +72,7 @@ export default async function FichaVivienda({ params }: PageProps<"/viviendas/[i
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="num font-semibold text-stone-500">{v.codigo}</p>
-          <h1 className="text-[1.75rem] leading-tight font-bold">{nombreJefe ?? "Vivienda sin familia registrada"}</h1>
+          <h1 className="text-[1.75rem] leading-tight font-bold">{nombreJefe ?? (v.infoPendiente ? "Casa con información pendiente" : "Vivienda sin familia registrada")}</h1>
           <div className="mt-2 flex flex-wrap gap-2">
             {sector && <span className="chip bg-stone-200 text-stone-800">{sector.nombre}</span>}
             {v.usaAcueducto ? (
@@ -102,6 +102,23 @@ export default async function FichaVivienda({ params }: PageProps<"/viviendas/[i
           {puede(u, "censo", "eliminar") && <EliminarVivienda id={v.id} />}
         </div>
       </header>
+
+      {v.infoPendiente && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-ocre-50 px-4 py-3 ring-1 ring-ocre-100">
+          <p className="flex items-start gap-2 text-ocre-800">
+            <ClipboardClock className="mt-0.5 size-5 shrink-0" aria-hidden />
+            <span>
+              <strong>Falta llenar la información</strong>
+              {v.motivoPendiente && <> · {MOTIVOS_PENDIENTE[v.motivoPendiente as MotivoPendiente]}</>}. Solo se guardó la ubicación; hay que volver.
+            </span>
+          </p>
+          {puede(u, "censo", "editar") && (
+            <Link href={`/viviendas/${v.id}/editar`} className="btn-primario">
+              Completar encuesta
+            </Link>
+          )}
+        </div>
+      )}
 
       {cercanas.length > 0 && (
         <div className="rounded-lg bg-ocre-50 px-4 py-3 ring-1 ring-ocre-100" role="alert">

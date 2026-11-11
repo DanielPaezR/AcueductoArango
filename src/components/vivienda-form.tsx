@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, Droplets, House, MapPin, Plus, Signature, Smartphone, UserRound, UsersRound, X } from "lucide-react";
+import { Camera, ClipboardClock, Droplets, House, MapPin, Plus, Signature, Smartphone, UserRound, UsersRound, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -10,7 +10,7 @@ import { avisoVisita } from "@/lib/legal";
 import { MapaSelector } from "@/components/mapa/dinamicos";
 import { dbLocal } from "@/lib/offline/db";
 import { comprimirImagen, subirAhora } from "@/lib/offline/sync";
-import { edadPersona, OPC } from "@/lib/opciones";
+import { edadPersona, MOTIVOS_PENDIENTE, OPC, type MotivoPendiente } from "@/lib/opciones";
 import type { PersonaInput, ViviendaInput } from "@/lib/validacion";
 
 type Sector = { id: number; nombre: string };
@@ -122,6 +122,8 @@ export function ViviendaForm({
   const setM = (id: string, np: PersonaInput) => setMiembros((xs) => xs.map((x) => (x.id === id ? np : x)));
   const pos: [number, number] | null = v.lat !== null && v.lng !== null ? [v.lat, v.lng] : null;
   const alquilada = v.tenencia === "Alquilada";
+  // Visita incompleta sin datos de la familia: se ocultan las preguntas que solo se pueden hacer con la familia presente
+  const sinFamilia = Boolean(v.infoPendiente) && !jefe.nombres.trim() && !miembros.length && !v.autorizacionDatos;
 
   const tomarGps = () =>
     gps.iniciar((p) =>
@@ -183,6 +185,7 @@ export function ViviendaForm({
   const guardar = async () => {
     setError(undefined);
     if (!pos) return setError("Falta la ubicación: use el GPS o marque la casa en el mapa.");
+    if (v.infoPendiente && !v.motivoPendiente) return setError("Indique por qué falta la información (finca de veraneo, no había nadie u otro).");
     if (miembros.some((m) => !m.nombres.trim())) return setError("Hay miembros sin nombre: complételos o quítelos.");
     if (!jefe.nombres.trim() && miembros.length) return setError("Escriba el nombre de la cabeza de familia.");
     const personas = [...(jefe.nombres.trim() ? [jefe] : []), ...miembros].map((p) => ({ ...p, nombres: p.nombres.trim() }));
@@ -214,7 +217,7 @@ export function ViviendaForm({
         await dbLocal.viviendas.put({
           id: v.id,
           payload: { vivienda, personas },
-          etiqueta: jefe.nombres.trim() || v.nombrePredio || v.referencia || "Vivienda sin familia",
+          etiqueta: jefe.nombres.trim() || v.nombrePredio || v.referencia || (v.infoPendiente ? "Casa con información pendiente" : "Vivienda sin familia"),
           guardadoEn: Date.now(),
           intentos: 0,
         });
@@ -278,6 +281,50 @@ export function ViviendaForm({
 
   return (
     <div className="space-y-4 pb-28">
+      {/* Visita incompleta */}
+      <section className={`tarjeta space-y-3 ${v.infoPendiente ? "ring-2 ring-ocre-500" : ""}`}>
+        <label className="flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            className="mt-0.5 size-6 shrink-0 accent-ocre-800"
+            checked={Boolean(v.infoPendiente)}
+            onChange={(e) => setV((x) => ({ ...x, infoPendiente: e.target.checked, motivoPendiente: e.target.checked ? (x.motivoPendiente ?? null) : null }))}
+          />
+          <span>
+            <span className="flex items-center gap-2 text-lg font-bold">
+              <ClipboardClock className="size-5 text-ocre-800" aria-hidden />
+              Falta llenar información
+            </span>
+            <span className="block text-stone-600">
+              Márquelo si no se pudo hacer la encuesta (finca de veraneo, no había nadie). Se guarda la ubicación y la casa queda pendiente para volver.
+            </span>
+          </span>
+        </label>
+        {v.infoPendiente && (
+          <>
+            <Campo label="¿Por qué?">
+              <Opciones
+                value={v.motivoPendiente ? MOTIVOS_PENDIENTE[v.motivoPendiente as MotivoPendiente] : null}
+                onChange={(x) => set("motivoPendiente", (Object.entries(MOTIVOS_PENDIENTE).find(([, l]) => l === x)?.[0] ?? null) as MotivoPendiente | null)}
+                opciones={Object.values(MOTIVOS_PENDIENTE)}
+              />
+            </Campo>
+            {sinFamilia && (
+              <Campo label="Nota para la próxima visita (opcional)">
+                <textarea
+                  className="input"
+                  rows={2}
+                  placeholder="Ej: vienen los fines de semana; preguntar en la casa del lado"
+                  value={v.observaciones ?? ""}
+                  onChange={(e) => set("observaciones", e.target.value)}
+                />
+              </Campo>
+            )}
+            {editando && <p className="text-sm text-ocre-800">Cuando complete la encuesta, quite esta marca.</p>}
+          </>
+        )}
+      </section>
+
       {/* Ubicación */}
       <Seccion titulo="Ubicación de la casa" icono={MapPin}>
         <div className="flex flex-wrap items-center gap-2">
@@ -352,6 +399,8 @@ export function ViviendaForm({
         )}
       </Seccion>
 
+      {!sinFamilia && (
+      <>
       {/* 1–4 Cabeza de familia */}
       <Seccion titulo="Cabeza de familia" icono={UserRound}>
         <Campo label="1. Nombre de la cabeza de familia">
@@ -370,6 +419,9 @@ export function ViviendaForm({
         </div>
         <Discapacidad p={jefe} onChange={setJefe} />
       </Seccion>
+
+      </>
+      )}
 
       {/* 5, 6, 8 La casa */}
       <Seccion titulo="La casa" icono={House}>
@@ -390,6 +442,8 @@ export function ViviendaForm({
         </Campo>
       </Seccion>
 
+      {!sinFamilia && (
+      <>
       {/* 7 Demás miembros */}
       <Seccion titulo={`7. Demás miembros de la casa (${miembros.length})`} icono={UsersRound}>
         {miembros.map((m, i) => (
@@ -433,6 +487,8 @@ export function ViviendaForm({
           + Agregar miembro
         </button>
       </Seccion>
+      </>
+      )}
 
       {/* 9–12 Acueducto */}
       <Seccion titulo="Acueducto" icono={Droplets}>
@@ -510,6 +566,7 @@ export function ViviendaForm({
       </Seccion>
 
       {/* Autorización */}
+      {!sinFamilia && (
       <Seccion titulo="Autorización de datos personales" icono={Signature}>
         <div className="space-y-2 rounded-lg bg-stone-50 p-3 text-[0.95rem] text-stone-800 ring-1 ring-stone-200">
           <p className="font-semibold">Lea esto a la familia antes de preguntar sus datos:</p>
@@ -563,13 +620,14 @@ export function ViviendaForm({
           <textarea className="input" rows={2} value={v.observaciones ?? ""} onChange={(e) => set("observaciones", e.target.value)} />
         </Campo>
       </Seccion>
+      )}
 
       {/* Barra de guardar fija abajo */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-white p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-2px_10px_rgb(26_32_28/0.08)] lg:left-64">
         <div className="mx-auto max-w-3xl">
           {error && <p className="mb-2 rounded-lg bg-teja-50 px-3 py-2.5 text-teja-700" role="alert">{error}</p>}
           <button className="btn-primario w-full py-3 text-base" onClick={guardar} disabled={guardando}>
-            {guardando ? "Guardando…" : editando ? "Guardar cambios" : "Guardar vivienda"}
+            {guardando ? "Guardando…" : v.infoPendiente ? "Guardar ubicación (información pendiente)" : editando ? "Guardar cambios" : "Guardar vivienda"}
           </button>
         </div>
       </div>

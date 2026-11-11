@@ -40,6 +40,14 @@ export const OPC = {
   grupoEtnico: ["Ninguno", "Afrodescendiente", "Indígena", "Raizal", "Rrom", "Palenquero"],
 } as const;
 
+/** Por qué una visita quedó con la información pendiente. */
+export const MOTIVOS_PENDIENTE = {
+  veraneo: "Finca de veraneo",
+  sin_atender: "No había nadie",
+  otro: "Otro motivo",
+} as const;
+export type MotivoPendiente = keyof typeof MOTIVOS_PENDIENTE;
+
 export const ESTADO_VIVIENDA_LABEL: Record<string, string> = {
   habitada: "Habitada",
   deshabitada: "Deshabitada",

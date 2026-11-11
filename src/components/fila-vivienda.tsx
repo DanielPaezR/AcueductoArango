@@ -1,4 +1,4 @@
-import { ChevronRight, Droplets, House, TriangleAlert, UsersRound } from "lucide-react";
+import { ChevronRight, ClipboardClock, Droplets, House, TriangleAlert, UsersRound } from "lucide-react";
 import Link from "next/link";
 import { miniatura } from "@/lib/imagenes";
 import { ESTADO_VIVIENDA_LABEL } from "@/lib/opciones";
@@ -11,6 +11,7 @@ export type ResumenVivienda = {
   usaAcueducto: boolean;
   autorizacionDatos: boolean;
   estado: string;
+  infoPendiente?: boolean;
   sector?: string | null;
   nombrePredio?: string | null;
   referencia?: string | null;
@@ -18,7 +19,8 @@ export type ResumenVivienda = {
 };
 
 /** Estado que pinta el zócalo de una vivienda. */
-export function zocaloVivienda(v: Pick<ResumenVivienda, "personas" | "autorizacionDatos" | "usaAcueducto">) {
+export function zocaloVivienda(v: Pick<ResumenVivienda, "personas" | "autorizacionDatos" | "usaAcueducto" | "infoPendiente">) {
+  if (v.infoPendiente) return "zocalo-pendiente";
   if (v.personas > 0 && !v.autorizacionDatos) return "zocalo-alerta";
   if (v.usaAcueducto) return "zocalo-agua";
   return "zocalo-muro";
@@ -41,7 +43,7 @@ export function FilaVivienda({ v }: { v: ResumenVivienda }) {
         </div>
       )}
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[1.05rem] font-bold text-stone-900">{v.jefe ?? "Sin familia registrada"}</div>
+        <div className="truncate text-[1.05rem] font-bold text-stone-900">{v.jefe ?? (v.infoPendiente ? "Falta llenar la información" : "Sin familia registrada")}</div>
         <div className="truncate text-[0.94rem] text-stone-600">{lugar || "Sin referencia"}</div>
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-stone-600">
           <span className="num font-semibold text-stone-500">{v.codigo}</span>
@@ -53,6 +55,12 @@ export function FilaVivienda({ v }: { v: ResumenVivienda }) {
             <span className="inline-flex items-center gap-1 font-semibold text-postigo-700">
               <Droplets className="size-4" aria-hidden />
               Acueducto
+            </span>
+          )}
+          {v.infoPendiente && (
+            <span className="inline-flex items-center gap-1 font-semibold text-ocre-800">
+              <ClipboardClock className="size-4" aria-hidden />
+              Pendiente
             </span>
           )}
           {sinAutorizacion && (

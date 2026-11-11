@@ -56,6 +56,8 @@ export default async function EditarVivienda({ params }: PageProps<"/viviendas/[
             autorizacionDocumento: v.autorizacionDocumento,
             autorizacionMedio: v.autorizacionMedio as "firma" | "verbal" | null,
             estado: v.estado as "habitada",
+            infoPendiente: v.infoPendiente,
+            motivoPendiente: v.motivoPendiente as "veraneo" | "sin_atender" | "otro" | null,
             observaciones: v.observaciones,
           },
           personas: d.personas.map(

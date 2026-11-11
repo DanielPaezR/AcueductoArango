@@ -149,6 +149,9 @@ export const viviendas = pgTable(
     datosSuprimidosEn: timestamp("datos_suprimidos_en", { withTimezone: true }),
 
     estado: varchar("estado", { length: 20 }).notNull().default("habitada"), // habitada, deshabitada, en_construccion, demolida
+    /** Visita incompleta: se guardó la ubicación pero falta llenar la encuesta (finca de veraneo, no había nadie…). */
+    infoPendiente: boolean("info_pendiente").notNull().default(false),
+    motivoPendiente: varchar("motivo_pendiente", { length: 20 }), // veraneo, sin_atender, otro
     observaciones: text("observaciones"),
     fotoPrincipalUrl: text("foto_principal_url"),
 

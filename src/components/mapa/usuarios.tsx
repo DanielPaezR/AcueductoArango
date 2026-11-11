@@ -18,6 +18,7 @@ export type PuntoVivienda = {
   sectorId: number | null;
   usaAcueducto: boolean;
   estado: string;
+  infoPendiente: boolean;
   jefe: string | null;
   personas: number;
   referencia: string | null;
@@ -174,11 +175,16 @@ export default function MapaUsuarios({
               key={p.id}
               center={[p.lat, p.lng]}
               radius={9}
-              pathOptions={{ color: "#fff", weight: 2.5, fillColor: color(p), fillOpacity: p.estado === "habitada" ? 0.95 : 0.4 }}
+              pathOptions={
+                p.infoPendiente
+                  ? { color: "#6e4c0c", weight: 2.5, dashArray: "3 3", fillColor: "#fff", fillOpacity: 0.85 }
+                  : { color: "#fff", weight: 2.5, fillColor: color(p), fillOpacity: p.estado === "habitada" ? 0.95 : 0.4 }
+              }
             >
               <Popup>
                 <div className="min-w-44 space-y-1 text-[0.95rem]">
-                  <div className="text-base font-bold text-stone-900">{p.jefe ?? "Sin familia registrada"}</div>
+                  <div className="text-base font-bold text-stone-900">{p.jefe ?? (p.infoPendiente ? "Información pendiente" : "Sin familia registrada")}</div>
+                  {p.infoPendiente && <div className="font-semibold text-ocre-800">Falta llenar la encuesta</div>}
                   <div className="num text-stone-600">{p.codigo}</div>
                   <div className="text-stone-700">
                     <span className="num">{p.personas}</span> persona(s){conAcueducto && <> · {p.usaAcueducto ? "Con acueducto" : "Sin acueducto"}</>}
@@ -192,6 +198,9 @@ export default function MapaUsuarios({
           {verNovedades && <MarcadoresNovedad puntos={novedades} />}
         </MapContainer>
         <div className="absolute bottom-8 left-3 z-[1000] space-y-1 rounded-lg bg-white px-3 py-2 text-sm font-semibold shadow-[0_2px_8px_rgb(0_0_0/0.3)]">
+          {puntos.some((p) => p.infoPendiente) && (
+            <div><span className="mr-1.5 inline-block size-3.5 rounded-full border-2 border-dashed border-ocre-800 bg-white align-middle" />Falta información</div>
+          )}
           {colorPor === "acueducto" ? (
             <>
               <div><span className="mr-1.5 inline-block size-3.5 rounded-full align-middle" style={{ background: AGUA }} />Con acueducto</div>

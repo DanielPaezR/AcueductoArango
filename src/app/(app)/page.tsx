@@ -227,6 +227,14 @@ export default async function Inicio() {
               <dd className={`num text-xl font-bold ${r.sinAutorizacion ? "text-teja-700" : ""}`}>{r.sinAutorizacion}</dd>
             </div>
           </dl>
+          {r.infoPendiente > 0 && (
+            <Link href="/viviendas?visita=pendiente" className="mt-4 flex items-center justify-between gap-3 rounded-lg bg-ocre-50 px-3 py-2.5 font-semibold text-ocre-800 ring-1 ring-ocre-100 hover:bg-ocre-100">
+              <span>
+                <span className="num">{r.infoPendiente}</span> casa{r.infoPendiente === 1 ? "" : "s"} con información pendiente por llenar
+              </span>
+              <span aria-hidden>→</span>
+            </Link>
+          )}
           {puede(u, "poblacion", "ver") && (
             <Link href="/poblacion" className="mt-4 inline-flex items-center gap-2 font-semibold text-marca-700 hover:underline">
               <ChartPie className="size-5" aria-hidden />

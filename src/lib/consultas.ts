@@ -23,10 +23,11 @@ export async function listarSectores() {
   return db.select().from(S).orderBy(asc(S.nombre));
 }
 
-export async function listarViviendas(f: { q?: string; sector?: number; acueducto?: boolean; pagina: number; porPagina: number }) {
+export async function listarViviendas(f: { q?: string; sector?: number; acueducto?: boolean; pendiente?: boolean; pagina: number; porPagina: number }) {
   const conds: (SQL | undefined)[] = [isNull(V.deletedAt)];
   if (f.sector) conds.push(eq(V.sectorId, f.sector));
   if (f.acueducto !== undefined) conds.push(eq(V.usaAcueducto, f.acueducto));
+  if (f.pendiente) conds.push(eq(V.infoPendiente, true));
   if (f.q) {
     const like = `%${f.q}%`;
     conds.push(
@@ -50,6 +51,7 @@ export async function listarViviendas(f: { q?: string; sector?: number; acueduct
         usaAcueducto: V.usaAcueducto,
         autorizacionDatos: V.autorizacionDatos,
         estado: V.estado,
+        infoPendiente: V.infoPendiente,
         sector: S.nombre,
         jefe: jefeSql,
         personas: numPersonasSql,
@@ -76,6 +78,7 @@ export async function puntosMapa() {
       sectorId: V.sectorId,
       usaAcueducto: V.usaAcueducto,
       estado: V.estado,
+      infoPendiente: V.infoPendiente,
       referencia: V.referencia,
       jefe: jefeSql,
       personas: numPersonasSql,
@@ -115,6 +118,7 @@ export async function resumenInicio() {
         viviendas: sql<number>`count(*)::int`,
         conAcueducto: sql<number>`count(*) filter (where ${V.usaAcueducto})::int`,
         conMatricula: sql<number>`count(*) filter (where ${V.tieneMatricula})::int`,
+        infoPendiente: sql<number>`count(*) filter (where ${V.infoPendiente})::int`,
         sinAutorizacion: sql<number>`count(*) filter (where not ${V.autorizacionDatos} and exists (
           select 1 from personas p where p.vivienda_id = viviendas.id and p.deleted_at is null))::int`,
         personas: sql<number>`(select count(*)::int from personas p join viviendas v2 on v2.id = p.vivienda_id
@@ -133,6 +137,7 @@ export async function resumenInicio() {
         usaAcueducto: V.usaAcueducto,
         autorizacionDatos: V.autorizacionDatos,
         estado: V.estado,
+        infoPendiente: V.infoPendiente,
         fotoPrincipalUrl: V.fotoPrincipalUrl,
         jefe: jefeSql,
         personas: numPersonasSql,

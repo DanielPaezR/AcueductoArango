@@ -14,10 +14,11 @@ export default async function Viviendas({ searchParams }: PageProps<"/viviendas"
   const q = typeof sp.q === "string" ? sp.q.trim() : "";
   const sector = Number(sp.sector) || undefined;
   const acueducto = sp.acueducto === "si" ? true : sp.acueducto === "no" ? false : undefined;
+  const pendiente = sp.visita === "pendiente" || undefined;
   const pagina = Math.max(1, Number(sp.pagina) || 1);
 
   const [{ filas, total }, sectores] = await Promise.all([
-    listarViviendas({ q, sector, acueducto, pagina, porPagina: POR_PAGINA }),
+    listarViviendas({ q, sector, acueducto, pendiente, pagina, porPagina: POR_PAGINA }),
     listarSectores(),
   ]);
   const paginas = Math.max(1, Math.ceil(total / POR_PAGINA));
@@ -26,11 +27,12 @@ export default async function Viviendas({ searchParams }: PageProps<"/viviendas"
     if (q) s.set("q", q);
     if (sector) s.set("sector", String(sector));
     if (sp.acueducto) s.set("acueducto", String(sp.acueducto));
+    if (pendiente) s.set("visita", "pendiente");
     s.set("pagina", String(p));
     return `/viviendas?${s}`;
   };
 
-  const filtrando = Boolean(q || sector || acueducto !== undefined);
+  const filtrando = Boolean(q || sector || acueducto !== undefined || pendiente);
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
@@ -72,6 +74,10 @@ export default async function Viviendas({ searchParams }: PageProps<"/viviendas"
             <option value="">Con y sin acueducto</option>
             <option value="si">Con acueducto</option>
             <option value="no">Sin acueducto</option>
+          </select>
+          <select name="visita" defaultValue={pendiente ? "pendiente" : ""} className="input w-auto flex-1" aria-label="Visita">
+            <option value="">Visitas completas y pendientes</option>
+            <option value="pendiente">Falta llenar información</option>
           </select>
           <button className="btn-secundario">Buscar</button>
         </div>

@@ -78,6 +78,13 @@
       "when": 1794227149321,
       "tag": "0010_novedad_archivo",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794403209494,
+      "tag": "0011_info_pendiente",
+      "breakpoints": true
     }
   ]
 }

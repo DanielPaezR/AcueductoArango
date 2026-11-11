@@ -54,6 +54,7 @@ const REPORTES: Record<string, Reporte> = {
       { titulo: "Cédula titular", clave: "titular_matricula_documento", ancho: 14 },
       { titulo: "Teléfono titular", clave: "titular_matricula_telefono", ancho: 14 },
       { titulo: "Autorizó datos", clave: "autorizacion" },
+      { titulo: "Visita", clave: "visita", ancho: 30 },
       { titulo: "Latitud", clave: "lat", ancho: 12 },
       { titulo: "Longitud", clave: "lng", ancho: 12 },
     ],
@@ -64,6 +65,8 @@ const REPORTES: Record<string, Reporte> = {
           case when v.tiene_matricula then 'Sí' when v.tiene_matricula = false then 'No' end as matricula,
           v.numero_matricula, v.titular_matricula_nombre, v.titular_matricula_documento, v.titular_matricula_telefono,
           case when v.autorizacion_datos then 'Sí' else 'No' end as autorizacion, v.lat, v.lng,
+          case when v.info_pendiente then 'Falta información' || case v.motivo_pendiente when 'veraneo' then ' (finca de veraneo)'
+            when 'sin_atender' then ' (no había nadie)' else '' end else 'Completa' end as visita,
           j.nombre as jefe, j.numero_documento as cedula, j.telefono,
           (select count(*)::int from personas p where p.vivienda_id = v.id and p.deleted_at is null) as personas
         from viviendas v

@@ -1,11 +1,11 @@
 "use client";
 
 import { useLiveQuery } from "dexie-react-hooks";
-import { CloudOff, CloudUpload, RefreshCw } from "lucide-react";
+import { CloudOff, CloudUpload, LogIn, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { dbLocal } from "@/lib/offline/db";
-import { sincronizar } from "@/lib/offline/sync";
+import { pedirSubidaEnFondo, sesion, sincronizar } from "@/lib/offline/sync";
 
 function suscribirConexion(cb: () => void) {
   window.addEventListener("online", cb);
@@ -21,14 +21,36 @@ export function useEnLinea() {
   return useSyncExternalStore(suscribirConexion, () => navigator.onLine, () => true);
 }
 
+/* El service worker sube pendientes por su cuenta (con la app cerrada o abierta) y avisa con un mensaje:
+   así se vuelven a contar, porque esos cambios no pasan por Dexie. */
+let vuelta = 0;
+const oyentesSw = new Set<() => void>();
+if (typeof navigator !== "undefined" && "serviceWorker" in navigator)
+  navigator.serviceWorker.addEventListener("message", (e) => {
+    if (e.data?.tipo !== "sincronizado") return;
+    vuelta++;
+    oyentesSw.forEach((f) => f());
+  });
+const suscribirSw = (f: () => void) => (oyentesSw.add(f), () => void oyentesSw.delete(f));
+
+/** Cambia cada vez que el service worker sube algo (para volver a leer la base local). */
+export function useVueltaSw() {
+  return useSyncExternalStore(suscribirSw, () => vuelta, () => 0);
+}
+
 /** Pendientes por tipo; `total` = todo lo que falta por subir. */
 export function useDetallePendientes() {
+  const v = useVueltaSw();
   return (
     useLiveQuery(async () => {
       const [casas, otros, fotos] = await Promise.all([dbLocal.viviendas.count(), dbLocal.operaciones.count(), dbLocal.fotos.count()]);
       return { casas, otros, fotos, total: casas + otros + fotos };
-    }, []) ?? { casas: 0, otros: 0, fotos: 0, total: 0 }
+    }, [v]) ?? { casas: 0, otros: 0, fotos: 0, total: 0 }
   );
+}
+
+export function useSesionVencida() {
+  return useSyncExternalStore(sesion.suscribir, sesion.vencida, () => false);
 }
 
 export function usePendientes() {
@@ -46,7 +68,7 @@ function describir(d: { casas: number; otros: number; fotos: number }) {
 }
 
 /** Páginas que se guardan en el teléfono para poder trabajar sin señal. */
-const PRECARGAR = ["/", "/viviendas/nueva", "/viviendas/pendientes", "/acueducto/punto/nuevo", "/mantenimientos/nuevo"];
+const PRECARGAR = ["/", "/viviendas/nueva", "/viviendas/pendientes", "/novedades/nueva", "/acueducto/punto/nuevo", "/mantenimientos/nuevo"];
 
 /** Motor en segundo plano: registra el service worker y sube pendientes. Montar una sola vez. */
 export function SyncMotor() {
@@ -56,16 +78,26 @@ export function SyncMotor() {
         .register("/sw.js")
         .then(() => navigator.serviceWorker.ready)
         .then((reg) => {
-          if (navigator.onLine) reg.active?.postMessage({ tipo: "precargar", urls: PRECARGAR });
+          if (!navigator.onLine) return;
+          reg.active?.postMessage({ tipo: "precargar", urls: PRECARGAR });
+          // El mapa se carga aparte: pedirlo una vez con señal lo deja guardado para usarlo sin ella
+          void import("@/components/mapa/selector").catch(() => {});
         })
         .catch(() => {});
     }
+    // Que el navegador no borre los pendientes del teléfono cuando le falte espacio
+    navigator.storage?.persist?.().catch(() => {});
+    void pedirSubidaEnFondo();
     const sync = () => navigator.onLine && sincronizar();
     window.addEventListener("online", sync);
+    // Al volver a la app (desde otra app o con la pantalla apagada) se intenta enseguida
+    const visible = () => document.visibilityState === "visible" && sync();
+    document.addEventListener("visibilitychange", visible);
     const t = setInterval(sync, 60_000);
     const inicial = setTimeout(sync, 1500);
     return () => {
       window.removeEventListener("online", sync);
+      document.removeEventListener("visibilitychange", visible);
       clearInterval(t);
       clearTimeout(inicial);
     };
@@ -77,6 +109,15 @@ export function SyncMotor() {
 export function SyncIndicador() {
   const enLinea = useEnLinea();
   const d = useDetallePendientes();
+  const vencida = useSesionVencida();
+
+  if (d.total > 0 && vencida)
+    return (
+      <Link href="/login" className="chip bg-teja-600 py-1 text-white" aria-label={`Sesión vencida: ${describir(d)} sin subir. Ingrese de nuevo.`}>
+        <LogIn className="size-4" aria-hidden />
+        Ingrese para subir <span className="num">{d.total}</span>
+      </Link>
+    );
 
   if (d.total > 0)
     return (

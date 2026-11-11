@@ -15,7 +15,51 @@ function conTiempo(url: string, init: RequestInit, ms: number) {
 const esDeRed = (e: unknown) => e instanceof TypeError || (e instanceof DOMException && e.name === "AbortError");
 
 const TIEMPO_DATOS = 20_000;
+/** Al guardar no se hace esperar a nadie: los datos ya quedaron en el teléfono. */
+const TIEMPO_GUARDAR = 8_000;
 const TIEMPO_FOTO = 90_000;
+
+/* ---------- Aviso de sesión vencida (los pendientes no pueden subir hasta volver a entrar) ---------- */
+
+const CLAVE_SESION = "vereda_sesion_vencida";
+const oyentesSesion = new Set<() => void>();
+function marcarSesion(vencida: boolean) {
+  try {
+    if (vencida) localStorage.setItem(CLAVE_SESION, "1");
+    else localStorage.removeItem(CLAVE_SESION);
+  } catch {}
+  oyentesSesion.forEach((f) => f());
+}
+export const sesion = {
+  suscribir(f: () => void) {
+    oyentesSesion.add(f);
+    return () => void oyentesSesion.delete(f);
+  },
+  vencida() {
+    try {
+      return localStorage.getItem(CLAVE_SESION) === "1";
+    } catch {
+      return false;
+    }
+  },
+};
+
+/**
+ * Pide al navegador que suba los pendientes en segundo plano apenas haya señal,
+ * aunque la app esté cerrada (Background Sync; Chrome en Android). En otros navegadores
+ * sube igual al abrir la app, cada minuto y cuando vuelve la señal.
+ */
+export async function pedirSubidaEnFondo() {
+  try {
+    const reg = await navigator.serviceWorker?.ready;
+    await (reg as ServiceWorkerRegistration & { sync?: { register(tag: string): Promise<void> } })?.sync?.register("subir-pendientes");
+  } catch {}
+}
+
+/** Un solo proceso a la vez sube cada carril, sea la página o el service worker. */
+function conCandado<T>(nombre: string, f: () => Promise<T>): Promise<T> {
+  return navigator.locks ? (navigator.locks.request(nombre, f) as Promise<T>) : f();
+}
 
 /**
  * Dos carriles independientes, cada uno con una sola ejecución a la vez:
@@ -45,14 +89,15 @@ function carril(tarea: (r: ResultadoSync) => Promise<void>) {
   };
 }
 
-const carrilDatos = carril(subirDatos);
-const carrilArchivos = carril(subirArchivos);
+const carrilDatos = carril((r) => conCandado("vereda-datos", () => subirDatos(r)));
+const carrilArchivos = carril((r) => conCandado("vereda-archivos", () => subirArchivos(r)));
 
 /** Sube todo lo pendiente: primero los datos, luego fotos y firmas. */
 export async function sincronizar(): Promise<ResultadoSync> {
   const d = await carrilDatos();
-  if (d.sesionVencida) return d;
+  if (d.sesionVencida) return (marcarSesion(true), d);
   const a = await carrilArchivos();
+  marcarSesion(Boolean(a.sesionVencida));
   return {
     subidas: d.subidas + a.subidas,
     fallidas: d.fallidas + a.fallidas,
@@ -66,6 +111,7 @@ export async function sincronizar(): Promise<ResultadoSync> {
  * Las fotos y la firma quedan en la cola y suben en segundo plano.
  */
 export async function subirAhora(tabla: "viviendas" | "operaciones", id: string): Promise<{ subido: boolean; error?: string }> {
+  void pedirSubidaEnFondo();
   if (!navigator.onLine) return { subido: false };
   const reg = tabla === "viviendas" ? await dbLocal.viviendas.get(id) : await dbLocal.operaciones.get(id);
   if (!reg) return { subido: true };
@@ -74,10 +120,13 @@ export async function subirAhora(tabla: "viviendas" | "operaciones", id: string)
     const res = await conTiempo(
       url,
       { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(reg.payload) },
-      TIEMPO_DATOS,
+      TIEMPO_GUARDAR,
     );
     const body = await res.json().catch(() => ({}));
-    if (res.status === 401) return { subido: false, error: body.error };
+    if (res.status === 401) {
+      marcarSesion(true);
+      return { subido: false, error: "Su sesión venció: quedó guardado en el teléfono. Ingrese de nuevo con señal para que suba." };
+    }
     if (!res.ok || !body.ok) {
       const error = body.error ?? `Error ${res.status}`;
       await (tabla === "viviendas" ? dbLocal.viviendas : dbLocal.operaciones).update(id, { error });

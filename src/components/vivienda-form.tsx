@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, ClipboardClock, Droplets, House, MapPin, Plus, Signature, Smartphone, UserRound, UsersRound, X } from "lucide-react";
+import { Camera, ClipboardClock, CloudCheck, Droplets, House, MapPin, Plus, Signature, Smartphone, UserRound, UsersRound, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -114,6 +114,7 @@ export function ViviendaForm({
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string>();
   const [guardadaLocal, setGuardadaLocal] = useState(false);
+  const [subida, setSubida] = useState(false);
   const gps = useGps();
   const [cercanas, setCercanas] = useState<{ id: string; codigo: string | null; jefe: string | null; distancia: number }[]>([]);
 
@@ -177,6 +178,7 @@ export function ViviendaForm({
     setFotos([]);
     setFirma(null);
     setGuardadaLocal(false);
+    setSubida(false);
     setError(undefined);
     window.scrollTo({ top: 0 });
     tomarGps();
@@ -243,13 +245,15 @@ export function ViviendaForm({
           });
       });
 
-      // Sube solo los datos de la casa (rápido) y abre la ficha; las fotos y la firma siguen en segundo plano
+      // Ya quedó en el teléfono. Se intenta subir solo los datos (rápido, máx. 8 s); fotos y firma siguen en segundo plano
       const r = await subirAhora("viviendas", v.id);
-      if (r.subido) {
+      if (r.subido && editando) {
         router.push(`/viviendas/${v.id}`);
         router.refresh();
         return;
       }
+      // Registro nuevo: se confirma aquí mismo (abrir la ficha necesita buena señal y podría quedarse cargando)
+      if (r.subido) return setSubida(true);
       if (r.error) setError(`El servidor respondió: ${r.error}`);
       setGuardadaLocal(true);
     } catch (e) {
@@ -259,13 +263,31 @@ export function ViviendaForm({
     }
   };
 
+  if (subida)
+    return (
+      <div className="tarjeta space-y-4 py-10 text-center">
+        <CloudCheck className="mx-auto size-12 text-marca-700" aria-hidden />
+        <h2 className="text-xl font-bold">Vivienda guardada y subida</h2>
+        <p className="text-stone-600">
+          {fotos.length || firma ? "Ya está en el sistema. Las fotos y la firma terminan de subir solas en segundo plano." : "Ya está en el sistema."}
+        </p>
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+          <button className="btn-primario" onClick={reiniciar}>
+            + Registrar otra vivienda
+          </button>
+          <Link className="btn-secundario" href={`/viviendas/${v.id}`}>Ver la ficha</Link>
+        </div>
+      </div>
+    );
+
   if (guardadaLocal)
     return (
       <div className="tarjeta space-y-4 py-10 text-center">
         <Smartphone className="mx-auto size-12 text-marca-700" aria-hidden />
         <h2 className="text-xl font-bold">Guardada en el teléfono</h2>
         <p className="text-stone-600">
-          No hay señal en este momento. La vivienda se subirá sola cuando vuelva la conexión (o desde “Pendientes”).
+          No hay señal (o es muy débil). La vivienda quedó segura en el teléfono y se subirá sola cuando vuelva la señal,
+          incluso con la app cerrada. No borre los datos del navegador ni desinstale la app mientras haya pendientes.
         </p>
         {error && <p className="rounded-lg bg-teja-50 px-3 py-2.5 text-teja-700" role="alert">{error}</p>}
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">

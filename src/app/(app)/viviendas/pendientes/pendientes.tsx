@@ -2,13 +2,16 @@
 
 import { useLiveQuery } from "dexie-react-hooks";
 import { Camera, CircleCheck, Droplets, House, TriangleAlert, Wrench } from "lucide-react";
-import { BotonSincronizar } from "@/components/sync-status";
+import Link from "next/link";
+import { BotonSincronizar, useSesionVencida, useVueltaSw } from "@/components/sync-status";
 import { dbLocal } from "@/lib/offline/db";
 
 export function Pendientes() {
-  const viv = useLiveQuery(() => dbLocal.viviendas.orderBy("guardadoEn").toArray(), []);
-  const fotos = useLiveQuery(() => dbLocal.fotos.orderBy("guardadoEn").toArray(), []);
-  const ops = useLiveQuery(() => dbLocal.operaciones.orderBy("guardadoEn").toArray(), []);
+  const v = useVueltaSw();
+  const viv = useLiveQuery(() => dbLocal.viviendas.orderBy("guardadoEn").toArray(), [v]);
+  const fotos = useLiveQuery(() => dbLocal.fotos.orderBy("guardadoEn").toArray(), [v]);
+  const ops = useLiveQuery(() => dbLocal.operaciones.orderBy("guardadoEn").toArray(), [v]);
+  const vencida = useSesionVencida();
 
   if (!viv || !fotos || !ops) return <div className="tarjeta text-stone-600">Cargando…</div>;
 
@@ -23,6 +26,13 @@ export function Pendientes() {
   const errorFoto = fotos.find((f) => f.error)?.error;
   return (
     <div className="space-y-3">
+      {vencida && (
+        <div className="rounded-lg bg-teja-50 px-4 py-3 text-teja-700 ring-1 ring-teja-100" role="alert">
+          <strong>Su sesión venció.</strong> Lo guardado sigue seguro en este teléfono, pero solo sube cuando vuelva a entrar.{" "}
+          <Link href="/login" className="font-bold underline">Ingresar de nuevo</Link>
+        </div>
+      )}
+      <p className="text-stone-600">Se suben solos cuando hay señal, aunque la app esté cerrada. El botón es solo para no esperar.</p>
       <BotonSincronizar />
       {viv.map((p) => (
         <div key={p.id} className="zocalo zocalo-pendiente rounded-xl border border-stone-200 bg-white p-4 pb-5">

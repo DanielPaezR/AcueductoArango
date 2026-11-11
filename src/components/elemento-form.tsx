@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Campo, Seccion, useGps } from "@/components/campos";
+import { Coordenadas } from "@/components/coordenadas";
 import { MapaSelector } from "@/components/mapa/dinamicos";
 import { comprimirImagen, guardarOperacion } from "@/lib/offline/sync";
 import { CAMPOS_DATOS, ESTADOS_RED, svgElemento, TIPOS_ELEMENTO, type EstadoRed, type TipoElemento } from "@/lib/red";
@@ -116,16 +117,21 @@ export function ElementoForm({ inicial }: { inicial?: Elemento }) {
             {verMapa ? "Ocultar mapa" : "Ajustar en el mapa"}
           </button>
         </div>
-        {pos ? (
-          <p className="num text-stone-700">
-            {pos[0].toFixed(6)}, {pos[1].toFixed(6)}
-            {e.precisionM != null && <> · ± {Math.round(e.precisionM)} m</>}
+        {!pos && <p className="text-stone-600">Párese junto al punto y tome la ubicación, o escriba las coordenadas.</p>}
+        <Coordenadas
+          pos={pos}
+          onChange={([lat, lng]) => {
+            gps.detener();
+            setE((x) => ({ ...x, lat, lng, precisionM: null, altitudM: null }));
+          }}
+        />
+        {pos && (e.precisionM != null || e.altitudM != null) && (
+          <p className="num text-sm text-stone-700">
+            {e.precisionM != null && <>± {Math.round(e.precisionM)} m</>}
             {e.altitudM != null && <> · {e.altitudM} m s.n.m.</>}
           </p>
-        ) : (
-          <p className="text-stone-600">Párese junto al punto y tome la ubicación.</p>
         )}
-        {gps.error && <p className="text-teja-700" role="alert">{gps.error}</p>}
+        {gps.error && !pos && <p className="text-teja-700" role="alert">{gps.error}</p>}
         {verMapa && (
           <MapaSelector
             pos={pos}

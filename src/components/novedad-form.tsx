@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Campo, Seccion, useGps } from "@/components/campos";
+import { Coordenadas } from "@/components/coordenadas";
 import { FotosPicker, type FotoNueva } from "@/components/fotos-picker";
 import { MapaSelector } from "@/components/mapa/dinamicos";
 import { svgNovedad } from "@/lib/novedades";
@@ -109,9 +110,15 @@ export function NovedadForm({ inicial }: { inicial?: Novedad }) {
           >
             {gps.estado === "buscando" ? "Buscando señal GPS…" : "Estoy en el sitio"}
           </button>
-          {pos && <span className="num text-stone-700">{pos[0].toFixed(5)}, {pos[1].toFixed(5)}</span>}
         </div>
-        {gps.error && <p className="text-teja-700" role="alert">{gps.error}</p>}
+        <Coordenadas
+          pos={pos}
+          onChange={([lat, lng]) => {
+            gps.detener();
+            setN((x) => ({ ...x, lat, lng }));
+          }}
+        />
+        {gps.error && !pos && <p className="text-teja-700" role="alert">{gps.error}</p>}
         <MapaSelector
           pos={pos}
           iconoHtml={svgNovedad(n.categoria, n.estado, 30)}

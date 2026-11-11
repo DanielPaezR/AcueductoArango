@@ -4,6 +4,7 @@ import { Camera, ClipboardClock, CloudCheck, Droplets, House, MapPin, Plus, Sign
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Coordenadas } from "@/components/coordenadas";
 import { Campo, Opciones, Seccion, Select, SiNo, useGps } from "@/components/campos";
 import { Firma } from "@/components/firma";
 import { avisoVisita } from "@/lib/legal";
@@ -357,9 +358,16 @@ export function ViviendaForm({
             {verMapa ? "Ocultar mapa" : "Ajustar en el mapa"}
           </button>
         </div>
-        {pos ? (
+        {!pos && <p className="text-stone-600">Párese frente a la casa y tome la ubicación, o escriba las coordenadas si no está en el sitio.</p>}
+        <Coordenadas
+          pos={pos}
+          onChange={([lat, lng]) => {
+            gps.detener();
+            setV((x) => ({ ...x, lat, lng, precisionM: null, altitudM: null, ubicacionAjustada: true }));
+          }}
+        />
+        {pos && (v.precisionM != null || v.ubicacionAjustada) && (
           <div className="text-sm">
-            <span className="num text-stone-700">{pos[0].toFixed(6)}, {pos[1].toFixed(6)}</span>
             {v.precisionM != null && !v.ubicacionAjustada && (
               <span
                 className={`chip ml-2 ${
@@ -369,15 +377,13 @@ export function ViviendaForm({
                 ± {Math.round(v.precisionM)} m
               </span>
             )}
-            {v.ubicacionAjustada && <span className="ml-2 chip ml-2 bg-postigo-50 text-postigo-800">Ajustada en el mapa</span>}
+            {v.ubicacionAjustada && <span className="chip bg-postigo-50 text-postigo-800">Ajustada a mano o en el mapa</span>}
           </div>
-        ) : (
-          <p className="text-stone-600">Párese frente a la casa y tome la ubicación.</p>
         )}
         {gps.estado === "buscando" && gps.lectura && (
           <p className="text-sm text-stone-600" role="status">Mejorando la precisión… espere unos segundos para un punto más exacto.</p>
         )}
-        {gps.error && <p className="text-teja-700" role="alert">{gps.error}</p>}
+        {gps.error && !pos && <p className="text-teja-700" role="alert">{gps.error}</p>}
         {cercanas.length > 0 && (
           <div className="rounded-lg bg-ocre-50 p-3 ring-1 ring-ocre-100" role="alert">
             <p className="font-semibold text-ocre-800">¿Esta casa ya está registrada? Hay registros muy cerca:</p>

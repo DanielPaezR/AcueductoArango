@@ -1,5 +1,5 @@
 import { GRUPOS_EDAD, type GrupoEdad } from "@/lib/opciones";
-import { datosResponsable } from "@/lib/legal";
+import { responsableActual } from "@/lib/veredas";
 import { filtrar, habitantes, jefesAlfabetico, nucleos } from "@/lib/poblacion";
 import { requerirPermiso } from "@/lib/session";
 
@@ -23,7 +23,7 @@ export default async function ImprimirPoblacion({ searchParams }: PageProps<"/im
   return (
     <article className="text-[0.92rem]">
       <header className="mb-4 border-b-2 border-stone-800 pb-2">
-        <p className="font-bold">{datosResponsable().nombre}</p>
+        <p className="font-bold">{(await responsableActual()).nombre}</p>
         <h1 className="text-xl font-bold">{titulo}</h1>
         <p className="text-stone-700">Generado el {hoy} · Documento interno con datos personales: no publicar.</p>
       </header>

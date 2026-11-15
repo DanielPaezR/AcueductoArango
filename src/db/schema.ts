@@ -24,7 +24,6 @@ import {
   serial,
   uniqueIndex,
   index,
-  pgSequence,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -40,6 +39,8 @@ export const rolEnum = pgEnum("rol", [
   "tesorero",
   "suscriptor",
   "consulta", // fiscal o veedor: solo lectura del área contable
+  "alcaldia", // alcaldía: consulta de todas las veredas, proyectos y ayudas municipales
+  "alcaldia_admin", // alcaldía: además crea veredas y sus presidentes
 ]);
 
 const timestamps = {
@@ -50,6 +51,52 @@ const timestamps = {
 const softDelete = {
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
 };
+
+/* ------------------------------------------------------------------ */
+/* Veredas (cada JAC es un "inquilino"; la alcaldía ve todas)          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Vereda de la sesión actual. La app la fija en cada conexión (`app.vereda_id`) y las políticas
+ * de seguridad por filas (RLS) de PostgreSQL filtran todo con ella: una vereda nunca ve datos de otra.
+ */
+const veredaActual = sql`nullif(current_setting('app.vereda_id', true), '')::int`;
+
+export const veredas = pgTable("veredas", {
+  id: serial("id").primaryKey(),
+  nombre: varchar("nombre", { length: 100 }).notNull(),
+  /** Para enlaces públicos: /transparencia?vereda=arango */
+  slug: varchar("slug", { length: 60 }).notNull().unique(),
+  municipio: varchar("municipio", { length: 80 }).notNull().default("Concepción"),
+  departamento: varchar("departamento", { length: 80 }).notNull().default("Antioquia"),
+  /** Datos de la JAC como responsable del tratamiento de datos */
+  nombreJac: varchar("nombre_jac", { length: 160 }),
+  nit: varchar("nit", { length: 30 }),
+  personeriaJuridica: varchar("personeria_juridica", { length: 60 }),
+  direccion: varchar("direccion", { length: 200 }),
+  telefono: varchar("telefono", { length: 30 }),
+  email: varchar("email", { length: 160 }),
+  /** Viviendas que se espera censar (para el avance) */
+  metaViviendas: integer("meta_viviendas").notNull().default(100),
+  /** Centro para los mapas */
+  lat: doublePrecision("lat"),
+  lng: doublePrecision("lng"),
+  activa: boolean("activa").notNull().default(true),
+  ...timestamps,
+});
+
+/** Numeraciones consecutivas propias de cada vereda (códigos de casas, asientos del libro, recibos). */
+export const contadores = pgTable(
+  "contadores",
+  {
+    veredaId: integer("vereda_id")
+      .notNull()
+      .references(() => veredas.id),
+    clave: varchar("clave", { length: 30 }).notNull(),
+    valor: integer("valor").notNull().default(0),
+  },
+  (t) => [uniqueIndex("contadores_pk").on(t.veredaId, t.clave)],
+);
 
 /* ------------------------------------------------------------------ */
 /* Usuarios del sistema y permisos                                     */
@@ -69,6 +116,8 @@ export const usuarios = pgTable("usuarios", {
   telefono: varchar("telefono", { length: 30 }),
   passwordHash: text("password_hash").notNull(),
   rol: rolEnum("rol").notNull(),
+  /** Vereda del usuario. Vacío = usuario municipal (superadmin o alcaldía). */
+  veredaId: integer("vereda_id").references(() => veredas.id),
   /** Cargo en la Junta (p.ej. "Presidenta", "Tesorera"). Es lo que se muestra en la página pública. */
   cargo: varchar("cargo", { length: 60 }),
   permisos: jsonb("permisos").$type<Record<string, string[]>>().notNull().default({}),
@@ -89,21 +138,21 @@ export const usuarios = pgTable("usuarios", {
 
 export const sectores = pgTable("sectores", {
   id: serial("id").primaryKey(),
-  nombre: varchar("nombre", { length: 100 }).notNull().unique(),
+  /** Vereda dueña del registro. La pone la base de datos según la sesión (ver drizzle/0012). */
+  veredaId: integer("vereda_id").notNull().default(veredaActual).references(() => veredas.id),
+  nombre: varchar("nombre", { length: 100 }).notNull(),
   descripcion: text("descripcion"),
   color: varchar("color", { length: 9 }),
-});
-
-export const viviendaCodigoSeq = pgSequence("vivienda_codigo_seq", { startWith: 1 });
+}, (t) => [uniqueIndex("sectores_vereda_nombre_uq").on(t.veredaId, t.nombre)]);
 
 export const viviendas = pgTable(
   "viviendas",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    /** Vereda dueña del registro. La pone la base de datos según la sesión (ver drizzle/0012). */
+    veredaId: integer("vereda_id").notNull().default(veredaActual).references(() => veredas.id),
     /** Código visible, p.ej. "V-0123". Lo asigna la base de datos al crear. */
-    codigo: varchar("codigo", { length: 20 })
-      .unique()
-      .default(sql`'V-' || lpad(nextval('vivienda_codigo_seq')::text, 4, '0')`),
+    codigo: varchar("codigo", { length: 20 }).default(sql`'V-' || lpad(siguiente_numero('vivienda')::text, 4, '0')`),
     sectorId: integer("sector_id").references(() => sectores.id),
 
     // Ubicación
@@ -151,6 +200,8 @@ export const viviendas = pgTable(
     estado: varchar("estado", { length: 20 }).notNull().default("habitada"), // habitada, deshabitada, en_construccion, demolida
     /** Visita incompleta: se guardó la ubicación pero falta llenar la encuesta (finca de veraneo, no había nadie…). */
     infoPendiente: boolean("info_pendiente").notNull().default(false),
+    /** La autorización de datos incluye compartirlos con la alcaldía (política 2.0 en adelante). */
+    autorizaAlcaldia: boolean("autoriza_alcaldia").notNull().default(false),
     motivoPendiente: varchar("motivo_pendiente", { length: 20 }), // veraneo, sin_atender, otro
     observaciones: text("observaciones"),
     fotoPrincipalUrl: text("foto_principal_url"),
@@ -160,13 +211,15 @@ export const viviendas = pgTable(
     ...timestamps,
     ...softDelete,
   },
-  (t) => [index("viviendas_sector_idx").on(t.sectorId)],
+  (t) => [index("viviendas_sector_idx").on(t.sectorId), uniqueIndex("viviendas_vereda_codigo_uq").on(t.veredaId, t.codigo)],
 );
 
 export const personas = pgTable(
   "personas",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    /** Vereda dueña del registro. La pone la base de datos según la sesión (ver drizzle/0012). */
+    veredaId: integer("vereda_id").notNull().default(veredaActual).references(() => veredas.id),
     viviendaId: uuid("vivienda_id")
       .notNull()
       .references(() => viviendas.id),
@@ -210,6 +263,8 @@ export const personas = pgTable(
 
 export const proyectos = pgTable("proyectos", {
   id: uuid("id").primaryKey().defaultRandom(),
+  /** Vereda dueña; vacío = de la alcaldía (municipal). */
+  veredaId: integer("vereda_id").default(veredaActual).references(() => veredas.id),
   nombre: varchar("nombre", { length: 160 }).notNull(),
   tipo: varchar("tipo", { length: 30 }).notNull(), // ayuda, proyecto, capacitacion, minga, evento, otro
   descripcion: text("descripcion"),
@@ -226,6 +281,8 @@ export const participaciones = pgTable(
   "participaciones",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    /** Vereda dueña del registro. La pone la base de datos según la sesión (ver drizzle/0012). */
+    veredaId: integer("vereda_id").notNull().default(veredaActual).references(() => veredas.id),
     proyectoId: uuid("proyecto_id")
       .notNull()
       .references(() => proyectos.id),
@@ -252,6 +309,8 @@ export const participaciones = pgTable(
  */
 export const elementosAcueducto = pgTable("elementos_acueducto", {
   id: uuid("id").primaryKey().defaultRandom(),
+  /** Vereda dueña del registro. La pone la base de datos según la sesión (ver drizzle/0012). */
+  veredaId: integer("vereda_id").notNull().default(veredaActual).references(() => veredas.id),
   tipo: varchar("tipo", { length: 30 }).notNull(),
   // bocatoma, desarenador, planta_tratamiento, tanque_almacenamiento, tanque_quiebre,
   // valvula, purga, ventosa, hidrante, macromedidor, otro
@@ -272,6 +331,8 @@ export const elementosAcueducto = pgTable("elementos_acueducto", {
 /** Tramos de tubería: geometría como lista de [lat, lng]. */
 export const tramosAcueducto = pgTable("tramos_acueducto", {
   id: uuid("id").primaryKey().defaultRandom(),
+  /** Vereda dueña del registro. La pone la base de datos según la sesión (ver drizzle/0012). */
+  veredaId: integer("vereda_id").notNull().default(veredaActual).references(() => veredas.id),
   nombre: varchar("nombre", { length: 120 }),
   tipo: varchar("tipo", { length: 20 }).notNull().default("distribucion"), // aduccion, conduccion, distribucion, acometida
   coordenadas: jsonb("coordenadas").$type<[number, number][]>().notNull(),
@@ -294,6 +355,8 @@ export const mantenimientos = pgTable(
   "mantenimientos",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    /** Vereda dueña del registro. La pone la base de datos según la sesión (ver drizzle/0012). */
+    veredaId: integer("vereda_id").notNull().default(veredaActual).references(() => veredas.id),
     tipo: varchar("tipo", { length: 30 }).notNull(), // reparacion, preventivo, limpieza, instalacion, inspeccion, conexion, suspension, reconexion
     titulo: varchar("titulo", { length: 160 }).notNull(),
     descripcion: text("descripcion"),
@@ -319,6 +382,8 @@ export const mantenimientos = pgTable(
 /** Factura de compra de materiales (puede asociarse o no a un mantenimiento). */
 export const compras = pgTable("compras", {
   id: uuid("id").primaryKey().defaultRandom(),
+  /** Vereda dueña del registro. La pone la base de datos según la sesión (ver drizzle/0012). */
+  veredaId: integer("vereda_id").notNull().default(veredaActual).references(() => veredas.id),
   mantenimientoId: uuid("mantenimiento_id").references(() => mantenimientos.id),
   proveedor: varchar("proveedor", { length: 120 }),
   numeroFactura: varchar("numero_factura", { length: 40 }),
@@ -334,6 +399,8 @@ export const compras = pgTable("compras", {
 
 export const materialesUsados = pgTable("materiales_usados", {
   id: uuid("id").primaryKey().defaultRandom(),
+  /** Vereda dueña del registro. La pone la base de datos según la sesión (ver drizzle/0012). */
+  veredaId: integer("vereda_id").notNull().default(veredaActual).references(() => veredas.id),
   mantenimientoId: uuid("mantenimiento_id")
     .notNull()
     .references(() => mantenimientos.id),
@@ -348,15 +415,14 @@ export const materialesUsados = pgTable("materiales_usados", {
 /* Acueducto: suscriptores y facturación (tarifa fija mensual)         */
 /* ------------------------------------------------------------------ */
 
-export const suscriptorCodigoSeq = pgSequence("suscriptor_codigo_seq", { startWith: 1 });
-
 export const suscriptores = pgTable("suscriptores", {
   id: uuid("id").primaryKey().defaultRandom(),
+  /** Vereda dueña del registro. La pone la base de datos según la sesión (ver drizzle/0012). */
+  veredaId: integer("vereda_id").notNull().default(veredaActual).references(() => veredas.id),
   /** Número de matrícula si la tiene; si no, "S-0001" consecutivo. */
   codigo: varchar("codigo", { length: 30 })
     .notNull()
-    .unique()
-    .default(sql`'S-' || lpad(nextval('suscriptor_codigo_seq')::text, 4, '0')`),
+    .default(sql`'S-' || lpad(siguiente_numero('suscriptor')::text, 4, '0')`),
   viviendaId: uuid("vivienda_id")
     .notNull()
     .references(() => viviendas.id),
@@ -368,23 +434,27 @@ export const suscriptores = pgTable("suscriptores", {
   observaciones: text("observaciones"),
   ...timestamps,
   ...softDelete,
-});
+}, (t) => [uniqueIndex("suscriptores_vereda_codigo_uq").on(t.veredaId, t.codigo)]);
 
 /** Historial de tarifas: la vigente para un mes es la de mayor `vigenteDesde` <= mes. */
 export const tarifas = pgTable("tarifas", {
   id: serial("id").primaryKey(),
+  /** Vereda dueña del registro. La pone la base de datos según la sesión (ver drizzle/0012). */
+  veredaId: integer("vereda_id").notNull().default(veredaActual).references(() => veredas.id),
   valorMensual: numeric("valor_mensual", { precision: 14, scale: 2 }).notNull(),
-  vigenteDesde: date("vigente_desde").notNull().unique(),
+  vigenteDesde: date("vigente_desde").notNull(),
   actaAprobacion: varchar("acta_aprobacion", { length: 120 }),
   notas: text("notas"),
   createdBy: uuid("created_by").references(() => usuarios.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
+}, (t) => [uniqueIndex("tarifas_vereda_desde_uq").on(t.veredaId, t.vigenteDesde)]);
 
 export const periodos = pgTable(
   "periodos",
   {
     id: serial("id").primaryKey(),
+    /** Vereda dueña del registro. La pone la base de datos según la sesión (ver drizzle/0012). */
+    veredaId: integer("vereda_id").notNull().default(veredaActual).references(() => veredas.id),
     anio: integer("anio").notNull(),
     mes: integer("mes").notNull(),
     fechaEmision: date("fecha_emision").notNull(),
@@ -396,7 +466,7 @@ export const periodos = pgTable(
     generadoPor: uuid("generado_por").references(() => usuarios.id),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => [uniqueIndex("periodos_anio_mes_uq").on(t.anio, t.mes)],
+  (t) => [uniqueIndex("periodos_anio_mes_uq").on(t.veredaId, t.anio, t.mes)],
 );
 
 /** Lado DEBE del estado de cuenta. */
@@ -404,6 +474,8 @@ export const cargos = pgTable(
   "cargos",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    /** Vereda dueña del registro. La pone la base de datos según la sesión (ver drizzle/0012). */
+    veredaId: integer("vereda_id").notNull().default(veredaActual).references(() => veredas.id),
     suscriptorId: uuid("suscriptor_id")
       .notNull()
       .references(() => suscriptores.id),
@@ -428,10 +500,12 @@ export const pagos = pgTable(
   "pagos",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    /** Vereda dueña del registro. La pone la base de datos según la sesión (ver drizzle/0012). */
+    veredaId: integer("vereda_id").notNull().default(veredaActual).references(() => veredas.id),
     suscriptorId: uuid("suscriptor_id")
       .notNull()
       .references(() => suscriptores.id),
-    numeroRecibo: serial("numero_recibo").notNull().unique(),
+    numeroRecibo: integer("numero_recibo").notNull().default(sql`siguiente_numero('recibo')`),
     fecha: date("fecha").notNull(),
     valor: numeric("valor", { precision: 14, scale: 2 }).notNull(),
     medio: varchar("medio", { length: 20 }).notNull().default("efectivo"), // efectivo, transferencia, nequi, daviplata, consignacion
@@ -444,7 +518,7 @@ export const pagos = pgTable(
     createdBy: uuid("created_by").references(() => usuarios.id),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => [index("pagos_suscriptor_idx").on(t.suscriptorId)],
+  (t) => [index("pagos_suscriptor_idx").on(t.suscriptorId), uniqueIndex("pagos_vereda_recibo_uq").on(t.veredaId, t.numeroRecibo)],
 );
 
 /* ------------------------------------------------------------------ */
@@ -453,6 +527,8 @@ export const pagos = pgTable(
 
 export const cuentas = pgTable("cuentas", {
   id: serial("id").primaryKey(),
+  /** Vereda dueña del registro. La pone la base de datos según la sesión (ver drizzle/0012). */
+  veredaId: integer("vereda_id").notNull().default(veredaActual).references(() => veredas.id),
   nombre: varchar("nombre", { length: 80 }).notNull(), // "Cuenta de ahorros Bancolombia"
   /** A qué plata pertenece: el acueducto y la Junta llevan cuentas separadas. */
   fondo: varchar("fondo", { length: 12 }).notNull().default("acueducto"), // acueducto, junta
@@ -476,6 +552,8 @@ export const movimientos = pgTable(
   "movimientos",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    /** Vereda dueña del registro. La pone la base de datos según la sesión (ver drizzle/0012). */
+    veredaId: integer("vereda_id").notNull().default(veredaActual).references(() => veredas.id),
     cuentaId: integer("cuenta_id")
       .notNull()
       .references(() => cuentas.id),
@@ -494,14 +572,19 @@ export const movimientos = pgTable(
     aprobadoEn: timestamp("aprobado_en", { withTimezone: true }),
     motivo: text("motivo"), // de rechazo o anulación
     /** Consecutivo del asiento (N.º en el libro de contabilidad). */
-    numero: serial("numero").notNull(),
+    /** N.º consecutivo del asiento en el libro de su vereda */
+    numero: integer("numero").notNull().default(sql`siguiente_numero('asiento')`),
     /** Comprobante físico (recibo, factura) referenciado en el libro. */
     comprobante: varchar("comprobante", { length: 40 }),
     actualizadoPor: uuid("actualizado_por").references(() => usuarios.id),
     actualizadoEn: timestamp("actualizado_en", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => [index("movimientos_cuenta_idx").on(t.cuentaId), index("movimientos_fecha_idx").on(t.fecha)],
+  (t) => [
+    index("movimientos_cuenta_idx").on(t.cuentaId),
+    index("movimientos_fecha_idx").on(t.fecha),
+    uniqueIndex("movimientos_vereda_numero_uq").on(t.veredaId, t.numero),
+  ],
 );
 
 /** Historial de cada asiento contable: quién lo creó, editó o anuló, cuándo, y cómo estaba antes y después. */
@@ -509,6 +592,8 @@ export const movimientosHistorial = pgTable(
   "movimientos_historial",
   {
     id: bigserial("id", { mode: "number" }).primaryKey(),
+    /** Vereda dueña del registro. La pone la base de datos según la sesión (ver drizzle/0012). */
+    veredaId: integer("vereda_id").notNull().default(veredaActual).references(() => veredas.id),
     movimientoId: uuid("movimiento_id")
       .notNull()
       .references(() => movimientos.id),
@@ -530,6 +615,8 @@ export const movimientosHistorial = pgTable(
 
 export const inventario = pgTable("inventario", {
   id: uuid("id").primaryKey().defaultRandom(),
+  /** Vereda dueña del registro. La pone la base de datos según la sesión (ver drizzle/0012). */
+  veredaId: integer("vereda_id").notNull().default(veredaActual).references(() => veredas.id),
   codigo: varchar("codigo", { length: 20 }),
   nombre: varchar("nombre", { length: 160 }).notNull(),
   descripcion: text("descripcion"),
@@ -548,6 +635,8 @@ export const inventario = pgTable("inventario", {
 
 export const actas = pgTable("actas", {
   id: uuid("id").primaryKey().defaultRandom(),
+  /** Vereda dueña del registro. La pone la base de datos según la sesión (ver drizzle/0012). */
+  veredaId: integer("vereda_id").notNull().default(veredaActual).references(() => veredas.id),
   numero: varchar("numero", { length: 20 }).notNull(),
   tipo: varchar("tipo", { length: 30 }).notNull().default("asamblea"), // asamblea, asamblea_extraordinaria, junta_directiva, otra
   fecha: date("fecha").notNull(),
@@ -575,6 +664,8 @@ export const novedades = pgTable(
   "novedades",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    /** Vereda dueña del registro. La pone la base de datos según la sesión (ver drizzle/0012). */
+    veredaId: integer("vereda_id").notNull().default(veredaActual).references(() => veredas.id),
     titulo: varchar("titulo", { length: 160 }).notNull(),
     descripcion: text("descripcion"),
     categoria: varchar("categoria", { length: 30 }).notNull().default("otro"), // vias, puentes, ambiental, limpieza, infraestructura, social, otro
@@ -598,6 +689,8 @@ export const novedades = pgTable(
 
 export const documentos = pgTable("documentos", {
   id: uuid("id").primaryKey().defaultRandom(),
+  /** Vereda dueña del registro. La pone la base de datos según la sesión (ver drizzle/0012). */
+  veredaId: integer("vereda_id").notNull().default(veredaActual).references(() => veredas.id),
   titulo: varchar("titulo", { length: 160 }).notNull(),
   categoria: varchar("categoria", { length: 30 }).notNull().default("otro"), // estatutos, reglamento, fondo_rotatorio, otro
   descripcion: text("descripcion"),
@@ -611,12 +704,17 @@ export const documentos = pgTable("documentos", {
 /* Configuración del sistema (módulos activos, etc.)                   */
 /* ------------------------------------------------------------------ */
 
-export const configuracion = pgTable("configuracion", {
-  clave: varchar("clave", { length: 60 }).primaryKey(),
-  valor: jsonb("valor").notNull(),
-  updatedBy: uuid("updated_by").references(() => usuarios.id),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
+export const configuracion = pgTable(
+  "configuracion",
+  {
+    veredaId: integer("vereda_id").notNull().default(veredaActual).references(() => veredas.id),
+    clave: varchar("clave", { length: 60 }).notNull(),
+    valor: jsonb("valor").notNull(),
+    updatedBy: uuid("updated_by").references(() => usuarios.id),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex("configuracion_vereda_clave_uq").on(t.veredaId, t.clave)],
+);
 
 /* ------------------------------------------------------------------ */
 /* Adjuntos (Cloudinary) — fotos, facturas, documentos de cualquier    */
@@ -627,6 +725,8 @@ export const adjuntos = pgTable(
   "adjuntos",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    /** Vereda dueña; vacío = de la alcaldía (municipal). */
+    veredaId: integer("vereda_id").default(veredaActual).references(() => veredas.id),
     entidad: varchar("entidad", { length: 30 }).notNull(), // vivienda, persona, elemento, tramo, mantenimiento, compra, pago, participacion, proyecto
     entidadId: uuid("entidad_id").notNull(),
     tipo: varchar("tipo", { length: 20 }).notNull().default("foto"), // foto, factura, documento, antes, despues, soporte, firma
@@ -650,6 +750,8 @@ export const auditoria = pgTable(
   "auditoria",
   {
     id: bigserial("id", { mode: "number" }).primaryKey(),
+    /** Vereda dueña; vacío = de la alcaldía (municipal). */
+    veredaId: integer("vereda_id").default(veredaActual).references(() => veredas.id),
     usuarioId: uuid("usuario_id").references(() => usuarios.id),
     accion: varchar("accion", { length: 30 }).notNull(), // crear, editar, eliminar, login, anular, generar_periodo...
     entidad: varchar("entidad", { length: 30 }).notNull(),

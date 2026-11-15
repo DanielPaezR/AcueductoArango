@@ -1,8 +1,18 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
+import { cambiarEstadoUsuarioMunicipal, editarUsuarioMunicipal, restablecerPasswordMunicipal } from "@/actions/municipio";
 import { cambiarEstadoUsuario, editarUsuario, restablecerPassword } from "@/actions/usuarios";
-import { accionesDe, ACCIONES, PLANTILLAS, ROLES, SECCIONES, type Accion, type Rol } from "@/lib/permisos";
+import { accionesDe, ACCIONES, esSeccionMunicipal, PLANTILLAS, ROLES, ROLES_DE_VEREDA, SECCIONES, type Accion, type Rol } from "@/lib/permisos";
+
+/** "vereda": usuarios de una vereda (los gestiona su presidencia). "municipio": usuarios de la alcaldía. */
+export type ModoUsuarios = "vereda" | "municipio";
+
+/** Roles que se pueden asignar en cada pantalla. */
+export function rolesAsignables(modo: ModoUsuarios, puedeSuperadmin: boolean): Rol[] {
+  if (modo === "vereda") return [...ROLES_DE_VEREDA];
+  return puedeSuperadmin ? ["alcaldia", "alcaldia_admin", "superadmin"] : ["alcaldia", "alcaldia_admin"];
+}
 
 type U = { id: string; nombre: string; username: string; telefono: string; cargo: string; rol: string; permisos: Record<string, string[]> };
 
@@ -11,13 +21,15 @@ export function EditarUsuarioForm({
   editable,
   esYoMismo,
   puedeSuperadmin,
+  modo = "vereda",
 }: {
   usuario: U;
   editable: boolean;
   esYoMismo: boolean;
   puedeSuperadmin: boolean;
+  modo?: ModoUsuarios;
 }) {
-  const [estado, accion, pendiente] = useActionState(editarUsuario, undefined);
+  const [estado, accion, pendiente] = useActionState(modo === "vereda" ? editarUsuario : editarUsuarioMunicipal, undefined);
   const [rol, setRol] = useState(usuario.rol as Rol);
   const esSuper = rol === "superadmin";
   const permisos = rol === usuario.rol ? usuario.permisos : (PLANTILLAS[rol] as Record<string, string[]>);
@@ -52,11 +64,9 @@ export function EditarUsuarioForm({
             onChange={(e) => setRol(e.target.value as Rol)}
             disabled={!editable || esYoMismo}
           >
-            {Object.entries(ROLES)
-              .filter(([r]) => r !== "superadmin" || puedeSuperadmin || usuario.rol === "superadmin")
-              .map(([r, l]) => (
-                <option key={r} value={r}>{l}</option>
-              ))}
+            {[...new Set([...rolesAsignables(modo, puedeSuperadmin), usuario.rol as Rol])].map((r) => (
+              <option key={r} value={r}>{ROLES[r]}</option>
+            ))}
           </select>
           {esYoMismo && <input type="hidden" name="rol" value={rol} />}
         </div>
@@ -78,7 +88,9 @@ export function EditarUsuarioForm({
                 </tr>
               </thead>
               <tbody>
-                {Object.entries(SECCIONES).map(([s, label]) => (
+                {Object.entries(SECCIONES)
+                  .filter(([s]) => esSeccionMunicipal(s) === (modo === "municipio"))
+                  .map(([s, label]) => (
                   <tr key={s} className="border-t border-stone-100">
                     <td className="py-2 pr-2">{label}</td>
                     {(Object.keys(ACCIONES) as Accion[]).map((a) => (
@@ -118,7 +130,7 @@ export function EditarUsuarioForm({
   );
 }
 
-export function EstadoUsuarioBoton({ id, activo }: { id: string; activo: boolean }) {
+export function EstadoUsuarioBoton({ id, activo, modo = "vereda" }: { id: string; activo: boolean; modo?: ModoUsuarios }) {
   const [pendiente, start] = useTransition();
   const [error, setError] = useState<string>();
   return (
@@ -130,7 +142,7 @@ export function EstadoUsuarioBoton({ id, activo }: { id: string; activo: boolean
           start(async () => {
             if (activo && !confirm("¿Desactivar este usuario? No podrá ingresar.")) return;
             try {
-              await cambiarEstadoUsuario(id, !activo);
+              await (modo === "vereda" ? cambiarEstadoUsuario : cambiarEstadoUsuarioMunicipal)(id, !activo);
             } catch (e) {
               setError((e as Error).message);
             }
@@ -144,8 +156,8 @@ export function EstadoUsuarioBoton({ id, activo }: { id: string; activo: boolean
   );
 }
 
-export function RestablecerPasswordForm({ id }: { id: string }) {
-  const [estado, accion, pendiente] = useActionState(restablecerPassword, undefined);
+export function RestablecerPasswordForm({ id, modo = "vereda" }: { id: string; modo?: ModoUsuarios }) {
+  const [estado, accion, pendiente] = useActionState(modo === "vereda" ? restablecerPassword : restablecerPasswordMunicipal, undefined);
   return (
     <form action={accion} className="flex flex-wrap items-end gap-2">
       <input type="hidden" name="id" value={id} />

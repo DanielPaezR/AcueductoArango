@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { puede, ROLES, type Rol } from "@/lib/permisos";
 import { requerirPermiso } from "@/lib/session";
@@ -8,11 +8,11 @@ export const metadata = { title: "Usuarios" };
 
 export default async function Usuarios() {
   const yo = await requerirPermiso("usuarios", "ver");
-  const lista = await db.select().from(schema.usuarios).orderBy(asc(schema.usuarios.nombre));
+  const lista = await db.select().from(schema.usuarios).where(eq(schema.usuarios.veredaId, yo.vereda!.id)).orderBy(asc(schema.usuarios.nombre));
   return (
     <div className="mx-auto max-w-5xl space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-[1.75rem] leading-tight font-bold">Usuarios del sistema</h1>
+        <h1 className="text-[1.75rem] leading-tight font-bold">Usuarios de la vereda</h1>
         {puede(yo, "usuarios", "crear") && (
           <Link href="/usuarios/nuevo" className="btn-primario">Nuevo usuario</Link>
         )}

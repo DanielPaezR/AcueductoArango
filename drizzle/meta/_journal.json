@@ -85,6 +85,13 @@
       "when": 1794403209494,
       "tag": "0011_info_pendiente",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794753613864,
+      "tag": "0012_multivereda",
+      "breakpoints": true
     }
   ]
 }

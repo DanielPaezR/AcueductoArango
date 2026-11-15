@@ -1,16 +1,17 @@
 import { ViviendaForm } from "@/components/vivienda-form";
 import { listarSectores } from "@/lib/consultas";
 import { requerirPermiso } from "@/lib/session";
+import { responsableActual } from "@/lib/veredas";
 
 export const metadata = { title: "Nueva vivienda" };
 
 export default async function NuevaVivienda() {
   await requerirPermiso("censo", "crear");
-  const sectores = await listarSectores();
+  const [sectores, r] = await Promise.all([listarSectores(), responsableActual()]);
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <h1 className="text-[1.75rem] leading-tight font-bold">Nueva vivienda</h1>
-      <ViviendaForm sectores={sectores.map((s) => ({ id: s.id, nombre: s.nombre }))} />
+      <ViviendaForm sectores={sectores.map((s) => ({ id: s.id, nombre: s.nombre }))} responsable={r.nombre} />
     </div>
   );
 }

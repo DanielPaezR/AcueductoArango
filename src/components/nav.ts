@@ -18,7 +18,11 @@ export type NombreIcono =
   | "reportes"
   | "usuarios"
   | "bitacora"
-  | "configuracion";
+  | "configuracion"
+  | "alcaldia"
+  | "tablero"
+  | "veredas"
+  | "cambiar";
 
 export type ItemNav = {
   href: string;
@@ -60,6 +64,17 @@ export const NAV: ItemNav[] = [
   { href: "/usuarios", label: "Usuarios", icono: "usuarios", seccion: "usuarios", grupo: "General" },
   { href: "/bitacora", label: "Bitácora", icono: "bitacora", seccion: "usuarios", grupo: "General" },
   { href: "/configuracion", label: "Configuración", icono: "configuracion", soloSuperadmin: true, grupo: "General" },
+];
+
+/** Menú de la alcaldía (todas las veredas). */
+export const NAV_MUNICIPIO: ItemNav[] = [
+  { href: "/municipio", label: "Tablero municipal", icono: "tablero", seccion: "municipio" },
+  { href: "/municipio/mapa", label: "Mapa del municipio", icono: "mapa", seccion: "municipio", grupo: "Municipio" },
+  { href: "/municipio/veredas", label: "Veredas", icono: "veredas", seccion: "municipio", grupo: "Municipio" },
+  { href: "/municipio/poblacion", label: "Población", icono: "poblacion", seccion: "municipio", grupo: "Municipio" },
+  { href: "/municipio/proyectos", label: "Proyectos y ayudas", icono: "ayudas", seccion: "municipio_ayudas", grupo: "Municipio" },
+  { href: "/municipio/usuarios", label: "Usuarios de la alcaldía", icono: "usuarios", seccion: "municipio_veredas", grupo: "Administración" },
+  { href: "/transparencia", label: "Páginas públicas", icono: "transparencia", grupo: "Administración" },
 ];
 
 /** Fase hasta la que ya hay pantallas construidas. */

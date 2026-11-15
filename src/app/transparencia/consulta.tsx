@@ -5,7 +5,7 @@ import { useActionState } from "react";
 import { consultarEstado } from "@/actions/publico";
 import { fechaCorta, pesos } from "@/lib/dinero";
 
-export function ConsultaEstado() {
+export function ConsultaEstado({ vereda }: { vereda: string }) {
   const [estado, accion, pendiente] = useActionState(consultarEstado, undefined);
   return (
     <section className="tarjeta" aria-labelledby="consulta">
@@ -13,9 +13,10 @@ export function ConsultaEstado() {
       <p className="mt-1 text-stone-700">Escriba la cédula del titular de la matrícula o de la cabeza de familia.</p>
       <p className="mt-1 text-sm text-stone-600">
         Consulte solo su propia cuenta. Las consultas están limitadas y quedan registradas (sin guardar la cédula).{" "}
-        <a href="/privacidad" className="font-semibold text-marca-700 underline">Política de datos</a>
+        <a href={`/privacidad?vereda=${vereda}`} className="font-semibold text-marca-700 underline">Política de datos</a>
       </p>
       <form action={accion} className="mt-4 flex flex-col gap-2 sm:flex-row">
+        <input type="hidden" name="vereda" value={vereda} />
         <label htmlFor="cedula" className="sr-only">Número de cédula</label>
         <input
           id="cedula"

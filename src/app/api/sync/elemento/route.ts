@@ -1,12 +1,12 @@
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { usuarioApi } from "@/lib/api";
+import { conRls, usuarioApi } from "@/lib/api";
 import { auditar } from "@/lib/auditoria";
 import { puede } from "@/lib/permisos";
 import { elementoSchema } from "@/lib/validacion";
 
 /** Crea o actualiza un punto de la red (bocatoma, tanque, válvula…). Idempotente por UUID. */
-export async function POST(req: Request) {
+export const POST = conRls(async (req: Request) => {
   const u = await usuarioApi();
   if (u instanceof Response) return u;
   const p = elementoSchema.safeParse(await req.json().catch(() => null));
@@ -24,4 +24,4 @@ export async function POST(req: Request) {
     .onConflictDoUpdate({ target: schema.elementosAcueducto.id, set: datos });
   await auditar(u.id, existente ? "editar" : "crear", "elemento", p.data.id, { tipo: p.data.tipo, estado: p.data.estado });
   return Response.json({ ok: true, id: p.data.id });
-}
+});

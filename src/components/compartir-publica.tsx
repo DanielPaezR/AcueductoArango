@@ -1,13 +1,15 @@
 import { Printer } from "lucide-react";
 import Link from "next/link";
+import { usuarioActual } from "@/lib/session";
 import { qrSvg, urlPublica } from "@/lib/url-publica";
 import { BotonesCompartir } from "./compartir-botones";
 
 /** Panel para compartir la página pública por WhatsApp, copiar el enlace o mostrar el QR. */
 export async function CompartirPublica() {
-  const url = await urlPublica();
+  const v = (await usuarioActual())?.vereda;
+  const url = await urlPublica(v?.slug);
   const svg = await qrSvg(url);
-  const mensaje = `Cuentas claras de la vereda Arango: aquí puede ver la plata del acueducto y de la Junta, los gastos con sus facturas y consultar su estado de cuenta con su cédula. ${url}`;
+  const mensaje = `Cuentas claras de la vereda ${v?.nombre ?? ""}: aquí puede ver la plata del acueducto y de la Junta, los gastos con sus facturas y consultar su estado de cuenta con su cédula. ${url}`;
   return (
     <section className="tarjeta" aria-labelledby="compartir">
       <h2 id="compartir" className="text-lg font-bold">Compartir la página pública</h2>

@@ -1,5 +1,5 @@
 import { fechaCorta, pesos } from "@/lib/dinero";
-import { datosResponsable } from "@/lib/legal";
+import { responsableActual } from "@/lib/veredas";
 import { datosLibro } from "@/lib/libro";
 import { requerirPermiso } from "@/lib/session";
 
@@ -10,7 +10,7 @@ export default async function ImprimirLibro({ searchParams }: PageProps<"/imprim
   const sp = await searchParams;
   const anio = sp.anio === "todo" ? undefined : Number(sp.anio) || undefined;
   const d = await datosLibro(anio);
-  const r = datosResponsable();
+  const r = await responsableActual();
   const c = "border border-stone-500 px-2 py-1 align-top";
   const n = `${c} num text-right whitespace-nowrap`;
   return (

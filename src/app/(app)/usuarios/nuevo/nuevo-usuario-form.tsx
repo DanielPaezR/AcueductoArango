@@ -1,11 +1,13 @@
 "use client";
 
 import { useActionState } from "react";
+import { crearUsuarioMunicipal } from "@/actions/municipio";
 import { crearUsuario } from "@/actions/usuarios";
 import { ROLES } from "@/lib/permisos";
+import { rolesAsignables, type ModoUsuarios } from "../[id]/forms";
 
-export function NuevoUsuarioForm({ puedeSuperadmin }: { puedeSuperadmin: boolean }) {
-  const [estado, accion, pendiente] = useActionState(crearUsuario, undefined);
+export function NuevoUsuarioForm({ puedeSuperadmin, modo = "vereda" }: { puedeSuperadmin: boolean; modo?: ModoUsuarios }) {
+  const [estado, accion, pendiente] = useActionState(modo === "vereda" ? crearUsuario : crearUsuarioMunicipal, undefined);
   const v = estado?.valores ?? {};
   return (
     <form action={accion} className="space-y-3" key={JSON.stringify(estado?.valores ?? {})}>
@@ -22,17 +24,15 @@ export function NuevoUsuarioForm({ puedeSuperadmin }: { puedeSuperadmin: boolean
         <input name="telefono" className="input" defaultValue={v.telefono} inputMode="tel" />
       </div>
       <div>
-        <label className="label">Cargo en la Junta (opcional)</label>
-        <input name="cargo" className="input" defaultValue={v.cargo} placeholder="Ej: Presidenta, Tesorera" />
+        <label className="label">{modo === "vereda" ? "Cargo en la Junta (opcional)" : "Cargo en la alcaldía (opcional)"}</label>
+        <input name="cargo" className="input" defaultValue={v.cargo} placeholder={modo === "vereda" ? "Ej: Presidenta, Tesorera" : "Ej: Secretaría de Desarrollo Comunitario"} />
       </div>
       <div>
         <label className="label">Rol</label>
-        <select name="rol" className="input" defaultValue={v.rol ?? "encuestador"}>
-          {Object.entries(ROLES)
-            .filter(([r]) => r !== "superadmin" || puedeSuperadmin)
-            .map(([r, l]) => (
-              <option key={r} value={r}>{l}</option>
-            ))}
+        <select name="rol" className="input" defaultValue={v.rol ?? (modo === "vereda" ? "encuestador" : "alcaldia")}>
+          {rolesAsignables(modo, puedeSuperadmin).map((r) => (
+            <option key={r} value={r}>{ROLES[r]}</option>
+          ))}
         </select>
         <p className="mt-1.5 text-sm text-stone-600">Se aplican los permisos por defecto del rol; luego se pueden ajustar.</p>
       </div>

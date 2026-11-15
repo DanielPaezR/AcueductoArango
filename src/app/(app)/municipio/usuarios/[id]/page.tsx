@@ -1,0 +1,42 @@
+import { eq } from "drizzle-orm";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { EditarUsuarioForm, EstadoUsuarioBoton, RestablecerPasswordForm } from "@/app/(app)/usuarios/[id]/forms";
+import { db, schema } from "@/db";
+import { esRolMunicipal, puede } from "@/lib/permisos";
+import { requerirMunicipio } from "@/lib/session";
+
+export const metadata = { title: "Usuario de la alcaldía" };
+
+export default async function UsuarioAlcaldia({ params }: PageProps<"/municipio/usuarios/[id]">) {
+  const { id } = await params;
+  const yo = await requerirMunicipio("municipio_veredas", "ver", `/municipio/usuarios/${id}`);
+  if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+  const u = await db.query.usuarios.findFirst({ where: eq(schema.usuarios.id, id) });
+  if (!u || !esRolMunicipal(u.rol)) notFound();
+  const editable = puede(yo, "municipio_veredas", "editar") && (u.rol !== "superadmin" || yo.rol === "superadmin");
+  return (
+    <div className="mx-auto max-w-3xl space-y-4">
+      <Link href="/municipio/usuarios" className="font-semibold text-marca-700 hover:underline">← Usuarios de la alcaldía</Link>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-[1.75rem] leading-tight font-bold">{u.nombre}</h1>
+        {editable && u.id !== yo.id && <EstadoUsuarioBoton id={u.id} activo={u.activo} modo="municipio" />}
+      </div>
+      <div className="tarjeta">
+        <EditarUsuarioForm
+          modo="municipio"
+          usuario={{ id: u.id, nombre: u.nombre, username: u.username, telefono: u.telefono ?? "", cargo: u.cargo ?? "", rol: u.rol, permisos: u.permisos }}
+          editable={editable}
+          esYoMismo={u.id === yo.id}
+          puedeSuperadmin={yo.rol === "superadmin"}
+        />
+      </div>
+      {editable && u.id !== yo.id && (
+        <div className="tarjeta">
+          <h2 className="mb-3 font-semibold">Restablecer contraseña</h2>
+          <RestablecerPasswordForm id={u.id} modo="municipio" />
+        </div>
+      )}
+    </div>
+  );
+}

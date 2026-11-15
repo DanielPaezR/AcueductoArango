@@ -2,7 +2,9 @@
 
 import { sql } from "drizzle-orm";
 import { headers } from "next/headers";
-import { db } from "@/db";
+import { eq } from "drizzle-orm";
+import { db, schema } from "@/db";
+import { conContexto } from "@/db/contexto";
 import { auditar } from "@/lib/auditoria";
 import { estadoSuscriptores } from "@/lib/finanzas";
 import { crearLimite } from "@/lib/limite";
@@ -39,7 +41,14 @@ export type ResultadoConsulta =
       }[];
     };
 
-export async function consultarEstado(_: ResultadoConsulta | undefined, form: FormData): Promise<ResultadoConsulta> {
+export async function consultarEstado(prev: ResultadoConsulta | undefined, form: FormData): Promise<ResultadoConsulta> {
+  // La consulta corre "dentro" de la vereda de la página: solo busca sus suscriptores
+  const v = await db.query.veredas.findFirst({ where: eq(schema.veredas.slug, String(form.get("vereda") ?? "")) });
+  if (!v || !v.activa) return { error: "Vereda no encontrada." };
+  return conContexto({ vereda: v.id, alcance: "vereda" }, () => consultar(prev, form));
+}
+
+async function consultar(_: ResultadoConsulta | undefined, form: FormData): Promise<ResultadoConsulta> {
   const cedula = String(form.get("cedula") ?? "").replace(/\D/g, "");
   if (cedula.length < 5 || cedula.length > 12) return { error: "Escriba el número de cédula, solo números." };
 

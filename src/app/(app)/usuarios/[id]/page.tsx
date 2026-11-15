@@ -2,7 +2,7 @@ import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
-import { puede } from "@/lib/permisos";
+import { esRolMunicipal, puede } from "@/lib/permisos";
 import { requerirPermiso } from "@/lib/session";
 import { EditarUsuarioForm, EstadoUsuarioBoton, RestablecerPasswordForm } from "./forms";
 
@@ -13,10 +13,10 @@ export default async function UsuarioDetalle({ params }: PageProps<"/usuarios/[i
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const u = await db.query.usuarios.findFirst({ where: eq(schema.usuarios.id, id) });
-  if (!u) notFound();
+  // Cada vereda solo ve sus propios usuarios
+  if (!u || u.veredaId !== yo.vereda?.id) notFound();
 
-  const editable =
-    puede(yo, "usuarios", "editar") && (u.rol !== "superadmin" || yo.rol === "superadmin");
+  const editable = puede(yo, "usuarios", "editar") && !esRolMunicipal(u.rol);
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">

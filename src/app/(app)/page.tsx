@@ -9,10 +9,10 @@ import { resumenInicio } from "@/lib/consultas";
 import { pesos } from "@/lib/dinero";
 import { saldoJunta } from "@/lib/libro";
 import { puede } from "@/lib/permisos";
+import { PLATAFORMA } from "@/lib/legal";
 import { requerirUsuario } from "@/lib/session";
+import { veredaPorId } from "@/lib/veredas";
 
-/** Meta aproximada del censo (la vereda tiene entre 500 y 700 casas). */
-const META_VIVIENDAS = 600;
 
 function saludo() {
   const h = Number(new Date().toLocaleString("en-US", { timeZone: "America/Bogota", hour: "numeric", hour12: false }));
@@ -22,6 +22,9 @@ function saludo() {
 export default async function Inicio() {
   const u = await requerirUsuario();
   if (u.debeCambiarPassword) redirect("/cuenta?primera=1");
+  // La alcaldía empieza en su tablero
+  if (!u.vereda) redirect("/municipio");
+  const META_VIVIENDAS = (await veredaPorId(u.vereda.id))?.metaViviendas ?? 100;
   const verCenso = puede(u, "censo", "ver");
   const r = verCenso ? await resumenInicio() : null;
   const m = await modulos();
@@ -64,7 +67,7 @@ export default async function Inicio() {
         <h1 className="text-[1.75rem] leading-tight font-bold">
           {saludo()}, {u.nombre.split(" ")[0]}
         </h1>
-        <p className="mt-1 text-lg text-stone-600">Vereda Arango · Concepción</p>
+        <p className="mt-1 text-lg text-stone-600">Vereda {u.vereda.nombre} · {PLATAFORMA.municipio.split(",")[0]}</p>
       </div>
 
       {(puede(u, "censo", "crear") || puede(u, "mapa_usuarios", "ver")) && (

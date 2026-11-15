@@ -9,11 +9,12 @@ import { requerirUsuario } from "@/lib/session";
 export async function cambiarModuloAcueducto(activo: boolean) {
   const u = await requerirUsuario();
   if (u.rol !== "superadmin") throw new Error("Solo el administrador del sistema puede cambiar esto");
+  if (!u.vereda) throw new Error("Primero entre a la vereda que quiere configurar");
   const valor = { acueducto: activo };
   await db
     .insert(schema.configuracion)
     .values({ clave: "modulos", valor, updatedBy: u.id })
-    .onConflictDoUpdate({ target: schema.configuracion.clave, set: { valor, updatedBy: u.id, updatedAt: new Date() } });
+    .onConflictDoUpdate({ target: [schema.configuracion.veredaId, schema.configuracion.clave], set: { valor, updatedBy: u.id, updatedAt: new Date() } });
   await auditar(u.id, "editar", "configuracion", "modulos", valor);
   revalidatePath("/", "layout");
 }

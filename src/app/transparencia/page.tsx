@@ -10,10 +10,14 @@ import { db, schema } from "@/db";
 import { modulos } from "@/lib/config";
 import { FONDOS, nombreMes, pesos, type Fondo } from "@/lib/dinero";
 import { cuentasConSaldo, listarMovimientos, resumenCartera } from "@/lib/finanzas";
+import { conContexto } from "@/db/contexto";
+import { PLATAFORMA } from "@/lib/legal";
+import { usuarioActual } from "@/lib/session";
+import { listarVeredas } from "@/lib/veredas";
 
 export const metadata = {
-  title: "Cuentas claras de la vereda Arango",
-  description: "Saldo, ingresos y gastos de la vereda Arango, publicados por la Junta de Acción Comunal.",
+  title: "Cuentas claras de las veredas",
+  description: "Saldo, ingresos y gastos de cada vereda, publicados por su Junta de Acción Comunal.",
 };
 
 const POR_PAGINA = 30;
@@ -21,6 +25,44 @@ const POR_PAGINA = 30;
 export default async function Transparencia({ searchParams }: PageProps<"/transparencia">) {
   await connection(); // siempre datos del momento
   const sp = await searchParams;
+  const veredas = await listarVeredas();
+  // ¿Qué vereda? La del enlace; si no hay, la única que exista o la del usuario que la abre
+  const slug = typeof sp.vereda === "string" ? sp.vereda : null;
+  const mia = slug || veredas.length === 1 ? null : (await usuarioActual())?.vereda?.id;
+  const v = slug ? veredas.find((x) => x.slug === slug) : veredas.length === 1 ? veredas[0] : veredas.find((x) => x.id === mia);
+  if (!v) return <ElegirVereda veredas={veredas} />;
+  // Todo lo que sigue se consulta "dentro" de esa vereda (la base de datos filtra el resto)
+  return conContexto({ vereda: v.id, alcance: "vereda" }, () => PaginaVereda({ v, sp }));
+}
+
+function ElegirVereda({ veredas }: { veredas: { id: number; nombre: string; slug: string }[] }) {
+  return (
+    <div className="min-h-dvh">
+      <header className="bg-marca-800 px-4 pt-6 pb-8 text-marca-50 sm:px-6">
+        <div className="mx-auto max-w-3xl">
+          <p className="font-semibold text-marca-100">{PLATAFORMA.nombre}</p>
+          <h1 className="mt-2 text-[2rem] leading-tight font-bold text-white">Cuentas claras</h1>
+          <p className="mt-2 text-lg text-marca-100">Cada Junta publica aquí su plata: cuánto hay, cuánto entra y en qué se gasta. Elija su vereda.</p>
+        </div>
+      </header>
+      <main className="mx-auto -mt-4 max-w-3xl px-4 pb-16 sm:px-6">
+        <ul className="tarjeta divide-y divide-stone-200 p-0 sm:p-0">
+          {veredas.map((x) => (
+            <li key={x.id}>
+              <Link href={`/transparencia?vereda=${x.slug}`} className="flex min-h-14 items-center justify-between px-4 py-3 text-lg font-bold hover:bg-stone-50 sm:px-5">
+                Vereda {x.nombre}
+                <span aria-hidden className="text-stone-400">›</span>
+              </Link>
+            </li>
+          ))}
+          {!veredas.length && <li className="px-4 py-3 text-stone-600">Todavía no hay veredas publicadas.</li>}
+        </ul>
+      </main>
+    </div>
+  );
+}
+
+async function PaginaVereda({ v, sp }: { v: { id: number; nombre: string; slug: string }; sp: Record<string, string | string[] | undefined> }) {
   const pagina = Math.max(1, Number(sp.pagina) || 1);
   const { acueducto: conAcueducto } = await modulos();
   // Sin el módulo del acueducto, la página pública muestra solo las cuentas de la Junta
@@ -48,7 +90,7 @@ export default async function Transparencia({ searchParams }: PageProps<"/transp
   const hayJunta = fondos.some((x) => x.f === "junta");
   const variosFondos = fondos.length > 1;
   const cuentas = cuentasTodas.filter((c) => c.fondo === fondo);
-  const url = await urlPublica();
+  const url = await urlPublica(v.slug);
   const paginas = Math.max(1, Math.ceil(total / POR_PAGINA));
   const ahora = new Date().toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "long", timeStyle: "short" });
   const mes = `${nombreMes(cartera.mes)} ${cartera.anio}`;
@@ -64,7 +106,7 @@ export default async function Transparencia({ searchParams }: PageProps<"/transp
     <div className="min-h-dvh">
       <header className="bg-marca-800 px-4 pt-6 pb-8 text-marca-50 sm:px-6">
         <div className="mx-auto max-w-3xl">
-          <p className="font-semibold text-marca-100">JAC Arango · Vereda Arango · Concepción, Antioquia</p>
+          <p className="font-semibold text-marca-100">JAC {v.nombre} · Vereda {v.nombre} · {PLATAFORMA.municipio}</p>
           <h1 className="mt-2 text-[2rem] leading-tight font-bold text-white">Cuentas claras</h1>
           <p className="mt-2 text-lg text-marca-100">
             {conAcueducto ? `La plata del acueducto${hayJunta ? " y de la Junta" : ""}` : "La plata de la Junta"} es de todos. Aquí se publica, en tiempo real, cuánto hay, cuánto
@@ -74,7 +116,7 @@ export default async function Transparencia({ searchParams }: PageProps<"/transp
       </header>
 
       <main className="mx-auto -mt-4 max-w-3xl space-y-8 px-4 pb-16 sm:px-6">
-        {conAcueducto && <ConsultaEstado />}
+        {conAcueducto && <ConsultaEstado vereda={v.slug} />}
 
         <section aria-labelledby="saldo">
           <h2 id="saldo" className="mb-3 text-lg font-bold">Dinero disponible hoy</h2>
@@ -166,7 +208,7 @@ export default async function Transparencia({ searchParams }: PageProps<"/transp
               {fondos.map((x) => (
                 <Link
                   key={x.f}
-                  href={`/transparencia?fondo=${x.f}#movimientos`}
+                  href={`/transparencia?vereda=${v.slug}&fondo=${x.f}#movimientos`}
                   aria-current={x.f === fondo ? "page" : undefined}
                   className={`flex min-h-12 items-center justify-center rounded-lg font-semibold ${x.f === fondo ? "bg-white text-marca-900 shadow-sm" : "text-stone-700"}`}
                 >
@@ -194,9 +236,9 @@ export default async function Transparencia({ searchParams }: PageProps<"/transp
           )}
           {paginas > 1 && (
             <nav className="mt-4 flex items-center justify-center gap-3" aria-label="Páginas">
-              {pagina > 1 && <Link className="btn-secundario" href={`/transparencia?fondo=${fondo}&pagina=${pagina - 1}#movimientos`}>Más recientes</Link>}
+              {pagina > 1 && <Link className="btn-secundario" href={`/transparencia?vereda=${v.slug}&fondo=${fondo}&pagina=${pagina - 1}#movimientos`}>Más recientes</Link>}
               <span className="num text-stone-700">Página {pagina} de {paginas}</span>
-              {pagina < paginas && <Link className="btn-secundario" href={`/transparencia?fondo=${fondo}&pagina=${pagina + 1}#movimientos`}>Anteriores</Link>}
+              {pagina < paginas && <Link className="btn-secundario" href={`/transparencia?vereda=${v.slug}&fondo=${fondo}&pagina=${pagina + 1}#movimientos`}>Anteriores</Link>}
             </nav>
           )}
         </section>
@@ -207,16 +249,16 @@ export default async function Transparencia({ searchParams }: PageProps<"/transp
             url={url}
             mensaje={
               conAcueducto
-                ? `Cuentas claras de la vereda Arango: saldo del acueducto y de la Junta, gastos con facturas y consulta del estado de cuenta con la cédula. ${url}`
-                : `Cuentas claras de la Junta de Acción Comunal de la vereda Arango: saldo, ingresos y gastos con sus comprobantes. ${url}`
+                ? `Cuentas claras de la vereda ${v.nombre}: saldo del acueducto y de la Junta, gastos con facturas y consulta del estado de cuenta con la cédula. ${url}`
+                : `Cuentas claras de la Junta de Acción Comunal de la vereda ${v.nombre}: saldo, ingresos y gastos con sus comprobantes. ${url}`
             }
           />
         </section>
 
         <footer className="border-t border-stone-200 pt-5 text-stone-600">
-          Publicado por la Junta de Acción Comunal de la vereda Arango. ¿Dudas sobre algún movimiento? Pregunte en la próxima asamblea o a la presidencia de la Junta.
+          Publicado por la Junta de Acción Comunal de la vereda {v.nombre}. ¿Dudas sobre algún movimiento? Pregunte en la próxima asamblea o a la presidencia de la Junta.
           <span className="mt-3 flex flex-wrap gap-x-4 gap-y-1 font-semibold">
-            <Link href="/privacidad" className="text-marca-700 underline">Política de datos personales</Link>
+            <Link href={`/privacidad?vereda=${v.slug}`} className="text-marca-700 underline">Política de datos personales</Link>
             <Link href="/terminos" className="text-marca-700 underline">Términos de uso</Link>
           </span>
         </footer>

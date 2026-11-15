@@ -8,13 +8,14 @@ export const metadata = { title: "Configuración" };
 export default async function Configuracion() {
   const u = await requerirUsuario();
   if (u.rol !== "superadmin") redirect("/");
+  if (!u.vereda) redirect("/municipio/veredas?elegir=1");
   const m = await modulos();
   return (
     <div className="mx-auto max-w-2xl space-y-5">
       <h1 className="text-[1.75rem] leading-tight font-bold">Configuración</h1>
       <section className="tarjeta space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-bold">Módulo del acueducto</h2>
+          <h2 className="text-lg font-bold">Módulo del acueducto de la vereda {u.vereda.nombre}</h2>
           <span className={`chip ${m.acueducto ? "bg-marca-50 text-marca-800" : "bg-stone-200 text-stone-700"}`}>{m.acueducto ? "Encendido" : "Apagado"}</span>
         </div>
         <p className="text-stone-700">

@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "JAC Arango",
-    short_name: "JAC Arango",
-    description: "Censo, mapa y acueducto de la vereda Arango",
+    name: "Veredas de Concepción",
+    short_name: "Veredas",
+    description: "Censo, libros y gestión de las Juntas de Acción Comunal y su alcaldía",
     start_url: "/",
     display: "standalone",
     background_color: "#f6f7f4",

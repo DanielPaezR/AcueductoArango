@@ -3,11 +3,11 @@ import { headers } from "next/headers";
 import QRCode from "qrcode";
 
 /** URL absoluta de la página pública según el dominio con que se abrió la app (Railway usa https). */
-export async function urlPublica() {
+export async function urlPublica(vereda?: string | null) {
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
   const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  return `${proto}://${host}/transparencia`;
+  return `${proto}://${host}/transparencia${vereda ? `?vereda=${encodeURIComponent(vereda)}` : ""}`;
 }
 
 /** Código QR como SVG (nítido al imprimir, sin descargar imágenes). */

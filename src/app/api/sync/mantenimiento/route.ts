@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { usuarioApi } from "@/lib/api";
+import { conRls, usuarioApi } from "@/lib/api";
 import { auditar } from "@/lib/auditoria";
 import { puede } from "@/lib/permisos";
 import { mantenimientoSchema } from "@/lib/validacion";
@@ -8,7 +8,7 @@ import { mantenimientoSchema } from "@/lib/validacion";
 const { mantenimientos: MT, materialesUsados: MU, compras: CP } = schema;
 
 /** Crea o actualiza un arreglo/mantenimiento con sus materiales y su factura de compra. Idempotente. */
-export async function POST(req: Request) {
+export const POST = conRls(async (req: Request) => {
   const u = await usuarioApi();
   if (u instanceof Response) return u;
   const p = mantenimientoSchema.safeParse(await req.json().catch(() => null));
@@ -56,4 +56,4 @@ export async function POST(req: Request) {
 
   await auditar(u.id, existente ? "editar" : "crear", "mantenimiento", m.id, { tipo: m.tipo, estado: m.estado, materiales: materiales.length });
   return Response.json({ ok: true, id: m.id });
-}
+});

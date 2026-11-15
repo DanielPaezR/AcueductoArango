@@ -2,6 +2,10 @@
 
 import {
   BookOpen,
+  Building2,
+  LayoutDashboard,
+  MapPinHouse,
+  ArrowLeftRight,
   ChartPie,
   ClipboardList,
   FileText,
@@ -42,4 +46,8 @@ export const ICONOS: Record<NombreIcono, LucideIcon> = {
   libros: BookOpen,
   documentos: FileText,
   configuracion: Settings,
+  alcaldia: Building2,
+  tablero: LayoutDashboard,
+  veredas: MapPinHouse,
+  cambiar: ArrowLeftRight,
 };

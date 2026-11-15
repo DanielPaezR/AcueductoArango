@@ -1,6 +1,6 @@
 import { ChevronLeft, Plus, Printer } from "lucide-react";
 import Link from "next/link";
-import { datosResponsable } from "@/lib/legal";
+import { responsableActual } from "@/lib/veredas";
 import { hoyBogota, pesos } from "@/lib/dinero";
 import { datosLibro } from "@/lib/libro";
 import { puede } from "@/lib/permisos";
@@ -29,7 +29,7 @@ export default async function LibroContable({ searchParams }: PageProps<"/libros
 
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="font-semibold text-stone-600">{datosResponsable().nombre}</p>
+          <p className="font-semibold text-stone-600">{(await responsableActual()).nombre}</p>
           <h1 className="text-[1.75rem] leading-tight font-bold">Libro de contabilidad</h1>
           {d.cuentas.length > 0 && (
             <p className="text-stone-700">

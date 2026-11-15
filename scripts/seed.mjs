@@ -53,4 +53,16 @@ if (reset) {
     }
   }
 }
+// Datos legales de la primera vereda: si se configuraron como variables JAC_* y su ficha está vacía, pasarlos a la ficha
+const env = (n) => process.env[n]?.trim() || null;
+if (env("JAC_NOMBRE") || env("JAC_NIT")) {
+  const r = await pool.query(
+    `update veredas set
+       nombre_jac = coalesce(nombre_jac, $1), nit = coalesce(nit, $2), personeria_juridica = coalesce(personeria_juridica, $3),
+       direccion = coalesce(direccion, $4), email = coalesce(email, $5), telefono = coalesce(telefono, $6)
+     where id = 1 and (nombre_jac is null or nit is null)`,
+    [env("JAC_NOMBRE"), env("JAC_NIT"), env("JAC_PERSONERIA"), env("JAC_DIRECCION"), env("JAC_CORREO"), env("JAC_TELEFONO")],
+  );
+  if (r.rowCount) console.log("✓ Datos de la Junta (variables JAC_*) copiados a la ficha de la vereda 1");
+}
 await pool.end();

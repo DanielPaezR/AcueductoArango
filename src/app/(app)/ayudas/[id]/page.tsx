@@ -79,7 +79,13 @@ export default async function Proyecto({ params }: PageProps<"/ayudas/[id]">) {
             <dd className="num text-xl font-bold">{pesos(valorTotal)}</dd>
           </div>
         </dl>
-        {puede(u, "ayudas", "editar") && <EstadoProyecto id={id} estado={pr.estado as "activo"} />}
+        {pr.veredaId === null ? (
+          <p className="mt-3 rounded-lg bg-postigo-50 px-3 py-2.5 text-postigo-800 ring-1 ring-postigo-100">
+            Proyecto de la alcaldía: la Junta puede registrar a sus familias; aquí solo ve las de su vereda.
+          </p>
+        ) : (
+          puede(u, "ayudas", "editar") && <EstadoProyecto id={id} estado={pr.estado as "activo"} />
+        )}
       </section>
 
       {puede(u, "ayudas", "crear") && pr.estado === "activo" && (

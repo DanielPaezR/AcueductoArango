@@ -1,3 +1,4 @@
+import { PLATAFORMA } from "@/lib/legal";
 import Link from "next/link";
 
 /** Marco común de las páginas legales públicas. */
@@ -6,7 +7,7 @@ export function PaginaLegal({ titulo, version, vigencia, children }: { titulo: s
     <div className="min-h-dvh">
       <header className="bg-marca-800 px-4 pt-6 pb-8 text-marca-50 sm:px-6">
         <div className="mx-auto max-w-3xl">
-          <p className="font-semibold text-marca-100">JAC Arango · Concepción, Antioquia</p>
+          <p className="font-semibold text-marca-100">{PLATAFORMA.nombre} · {PLATAFORMA.municipio}</p>
           <h1 className="mt-2 text-[2rem] leading-tight font-bold text-white">{titulo}</h1>
           <p className="mt-2 text-marca-100">
             Versión {version} · vigente desde el {vigencia}

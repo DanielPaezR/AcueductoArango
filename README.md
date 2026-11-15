@@ -1,14 +1,40 @@
-# JAC Arango
+# Veredas de Concepción
 
-Sistema de información de la **Junta de Acción Comunal de la vereda Arango** (Concepción, Antioquia):
-censo georreferenciado de las viviendas y sus familias, red del acueducto comunitario, mantenimientos del
-fontanero, cobros y tesorería del acueducto, ayudas y proyectos, reportes, y una **página pública de
-transparencia** donde cualquier persona ve las cuentas y cada suscriptor consulta su estado de cuenta.
+Plataforma para las **Juntas de Acción Comunal de las veredas de Concepción (Antioquia) y su alcaldía**.
+Cada vereda tiene su propio sistema (censo georreferenciado de viviendas y familias, libros de la Junta,
+novedades y obras, ayudas, acueducto opcional, página pública de cuentas) y **solo ve lo suyo**; la
+**alcaldía** ve todas las veredas en un tablero municipal con métricas, mapa, población, proyectos y ayudas.
+La primera vereda es **Arango**.
 
 - Producción: <https://veredaarango-production.up.railway.app>
 - Página pública: `/transparencia` · Política de datos: `/privacidad` · Términos: `/terminos`
 
 ---
+
+## Varias veredas y la alcaldía
+
+| Quién | Qué ve y hace |
+|---|---|
+| **Usuarios de una vereda** (presidencia, tesorería, encuestadores, fiscal, fontanero) | Solo los datos de su vereda. La presidencia crea los usuarios de su vereda en `/usuarios`. |
+| **Alcaldía (consulta municipal)** `alcaldia` | `/municipio`: tablero con indicadores de todas las veredas, comparativo, alertas, mapa del municipio, población por vereda y grupo de edad, proyectos y ayudas municipales (crea proyectos, registra familias beneficiadas, historial de ayudas por familia), Excel. |
+| **Alcaldía (administrador)** `alcaldia_admin` | Lo anterior + crea veredas con su presidente(a), edita sus datos y módulos, crea usuarios de vereda y de la alcaldía, restablece claves. |
+| **Superadmin** | Todo lo de la alcaldía; además "**Trabajar en esta vereda**" (`/municipio/veredas`) para registrar o corregir dentro de una vereda, y "Volver a la alcaldía". |
+
+**Aislamiento por vereda (RLS de PostgreSQL).** Todas las tablas de datos tienen `vereda_id` y políticas de
+seguridad por filas (`drizzle/0012_multivereda.sql`). La app se conecta con el rol `vereda_app` y, en cada
+conexión, fija `app.vereda_id` y `app.alcance` según el usuario (`src/db/contexto.ts`, `src/db/index.ts`):
+aunque una consulta olvide filtrar, la base de datos nunca devuelve ni modifica datos de otra vereda. Al
+crear registros, la vereda la pone la base de datos. Códigos de casa, asientos del libro y recibos se numeran
+por vereda (`contadores` + `siguiente_numero()`).
+
+**Datos personales y alcaldía.** Desde la política 2.0 el aviso de la visita dice que los datos se comparten con
+la alcaldía. La alcaldía ve siempre las **cifras** de todas las familias, pero **nombres y documentos solo de las
+familias que autorizaron con ese texto** (`viviendas.autoriza_alcaldia`). Las autorizaciones anteriores se
+renuevan al editar la vivienda ("Renovar la autorización con el aviso nuevo"). Cada Junta es responsable de sus
+datos: su nombre legal, NIT y contacto se llenan en la ficha de la vereda.
+
+**Página pública.** `/transparencia?vereda=<slug>` (sin vereda: lista para elegir). Variables opcionales:
+`NOMBRE_PLATAFORMA`, `NOMBRE_ALCALDIA`.
 
 ## Contenido
 
@@ -147,7 +173,8 @@ Lo que debe hacer la Junta (fuera del sistema):
 
 - **Next.js 16** (App Router, Server Actions, proxy) · TypeScript · Tailwind v4.
 - **PostgreSQL** + **Drizzle ORM**; migraciones SQL versionadas en `drizzle/` (se aplican solas al arrancar).
-- **Sesiones** JWT firmadas en cookie httpOnly (30 días, verificadas contra la BD en cada petición).
+- **Sesiones** JWT firmadas en cookie httpOnly (30 días renovables, verificadas contra la BD en cada petición).
+- **Multi-vereda**: RLS de PostgreSQL con contexto por conexión (ver "Varias veredas y la alcaldía").
 - **Mapas**: Leaflet + Esri World Imagery (satélite) y OpenStreetMap.
 - **Archivos**: Cloudinary (fotos comprimidas en el celular; firmas privadas).
 - **Offline**: PWA con service worker (`public/sw.js`), IndexedDB (Dexie, `src/lib/offline/`) y cola de
@@ -158,7 +185,8 @@ Lo que debe hacer la Junta (fuera del sistema):
 ```
 src/
   app/(auth)/login         Ingreso
-  app/(app)/...            Pantallas con sesión (shell con menú)
+  app/(app)/...            Pantallas con sesión de una vereda (shell con menú)
+  app/(app)/municipio/...  Módulo de la alcaldía (tablero, mapa, veredas, población, proyectos, usuarios)
   app/transparencia        Página pública
   app/privacidad, terminos Páginas legales públicas
   app/aceptar              Aceptación de términos

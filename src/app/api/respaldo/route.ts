@@ -6,7 +6,9 @@ import { usuarioActual } from "@/lib/session";
 
 /** Tablas incluidas en el respaldo (nunca las contraseñas). */
 const TABLAS: [string, string][] = [
-  ["usuarios", "select id, nombre, username, email, telefono, rol, cargo, permisos::text, activo, ultimo_acceso, created_at from usuarios"],
+  ["veredas", "select * from veredas"],
+  ["usuarios", "select id, vereda_id, nombre, username, email, telefono, rol, cargo, permisos::text, activo, ultimo_acceso, created_at from usuarios"],
+  ["contadores", "select * from contadores"],
   ["sectores", "select * from sectores"],
   ["viviendas", "select * from viviendas"],
   ["personas", "select * from personas"],
@@ -41,9 +43,9 @@ export async function GET() {
   if (u.rol !== "superadmin") return Response.json({ error: "Solo el superadministrador puede descargar el respaldo" }, { status: 403 });
 
   const libro = new ExcelJS.Workbook();
-  libro.creator = "JAC Arango";
+  libro.creator = "Plataforma de veredas";
   const resumen = libro.addWorksheet("LEAME");
-  resumen.addRow(["Respaldo completo de JAC Arango"]);
+  resumen.addRow([u.vereda ? `Respaldo de la vereda ${u.vereda.nombre}` : "Respaldo completo de todas las veredas"]);
   resumen.addRow(["Generado", new Date().toLocaleString("es-CO", { timeZone: "America/Bogota" })]);
   resumen.addRow(["Contiene datos personales protegidos por la Ley 1581 de 2012. Guárdelo en un lugar seguro y no lo comparta."]);
   resumen.addRow([]);
@@ -63,7 +65,7 @@ export async function GET() {
   return new Response(await libro.xlsx.writeBuffer(), {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="JAC-Arango-respaldo-${fecha}.xlsx"`,
+      "Content-Disposition": `attachment; filename="respaldo-${u.vereda?.slug ?? "todas-las-veredas"}-${fecha}.xlsx"`,
       "Cache-Control": "no-store",
     },
   });

@@ -1,6 +1,6 @@
 import { listarInventario } from "@/app/(app)/libros/inventario/lista";
 import { fechaCorta, pesos } from "@/lib/dinero";
-import { datosResponsable } from "@/lib/legal";
+import { responsableActual } from "@/lib/veredas";
 import { ESTADOS_BIEN } from "@/lib/opciones";
 import { requerirPermiso } from "@/lib/session";
 
@@ -9,7 +9,7 @@ export const metadata = { title: "Libro de inventario" };
 export default async function ImprimirInventario() {
   await requerirPermiso("libro_inventario", "ver");
   const items = await listarInventario();
-  const r = datosResponsable();
+  const r = await responsableActual();
   const hoy = new Date().toLocaleDateString("es-CO", { timeZone: "America/Bogota", dateStyle: "long" });
   const c = "border border-stone-500 px-2 py-1 text-left align-top";
   return (

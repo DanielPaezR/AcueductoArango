@@ -4,11 +4,13 @@ import { db, schema } from "@/db";
 import { fechaCorta, MEDIO_LABEL, pesos } from "@/lib/dinero";
 import { estadoSuscriptores } from "@/lib/finanzas";
 import { requerirPermiso } from "@/lib/session";
+import { nombreVereda } from "@/lib/veredas";
 
 export const metadata = { title: "Recibo de pago" };
 
 export default async function Recibo({ params }: PageProps<"/imprimir/recibo/[id]">) {
   await requerirPermiso("facturacion", "ver");
+  const vereda = await nombreVereda();
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const pago = await db.query.pagos.findFirst({ where: eq(schema.pagos.id, id) });
@@ -23,8 +25,8 @@ export default async function Recibo({ params }: PageProps<"/imprimir/recibo/[id
     <article className="rounded-xl border-2 border-stone-800 p-6 print:rounded-none">
       <header className="flex items-start justify-between gap-4 border-b-2 border-stone-800 pb-4">
         <div>
-          <p className="text-lg font-bold">JAC Arango · Acueducto veredal</p>
-          <p className="text-stone-700">Vereda Arango · Concepción, Antioquia</p>
+          <p className="text-lg font-bold">JAC {vereda} · Acueducto veredal</p>
+          <p className="text-stone-700">Vereda {vereda} · Concepción, Antioquia</p>
         </div>
         <div className="text-right">
           <p className="text-sm text-stone-600">Recibo de pago</p>

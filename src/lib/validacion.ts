@@ -79,6 +79,8 @@ export const viviendaSchema = z.object({
   autorizacionMedio: z.enum(["firma", "verbal"]).nullish().transform((v) => v ?? null),
   estado: z.enum(["habitada", "deshabitada", "en_construccion", "demolida"]).default("habitada"),
   infoPendiente: z.boolean().default(false),
+  /** La familia volvió a autorizar con el aviso vigente (que incluye a la alcaldía). */
+  renovarAutorizacion: z.boolean().optional(),
   motivoPendiente: z.enum(["veraneo", "sin_atender", "otro"]).nullish().transform((v) => v ?? null),
   observaciones: txt(2000),
 });

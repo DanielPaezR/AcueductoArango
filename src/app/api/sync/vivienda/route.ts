@@ -1,16 +1,16 @@
 import { and, eq, isNull, notInArray, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { usuarioApi } from "@/lib/api";
+import { conRls, usuarioApi } from "@/lib/api";
 import { auditar } from "@/lib/auditoria";
 import { puede } from "@/lib/permisos";
-import { VERSION_POLITICA } from "@/lib/legal";
+import { autorizaAlcaldia, VERSION_POLITICA } from "@/lib/legal";
 import { syncViviendaSchema } from "@/lib/validacion";
 
 /**
  * Crea o actualiza (upsert por UUID generado en el celular) una vivienda con su familia.
  * Es idempotente: reenviar el mismo paquete no duplica nada.
  */
-export async function POST(req: Request) {
+export const POST = conRls(async (req: Request) => {
   const usuario = await usuarioApi();
   if (usuario instanceof Response) return usuario;
 
@@ -40,11 +40,16 @@ export async function POST(req: Request) {
   }
 
   const ahora = new Date();
+  const { renovarAutorizacion, ...vivienda } = v;
+  // La versión de la política queda fijada al momento de autorizar (o al renovar la autorización con el aviso vigente)
+  const nueva = v.autorizacionDatos && (!existente?.autorizacionDatos || renovarAutorizacion);
+  const autorizacionVersion = v.autorizacionDatos ? (nueva ? VERSION_POLITICA : (existente?.autorizacionVersion ?? VERSION_POLITICA)) : null;
   const datos = {
-    ...v,
-    autorizacionFecha: v.autorizacionDatos ? (existente?.autorizacionDatos ? existente.autorizacionFecha : ahora) : null,
-    // La versión de la política queda fijada al momento de autorizar
-    autorizacionVersion: v.autorizacionDatos ? (existente?.autorizacionDatos ? (existente.autorizacionVersion ?? VERSION_POLITICA) : VERSION_POLITICA) : null,
+    ...vivienda,
+    autorizacionFecha: v.autorizacionDatos ? (nueva ? ahora : existente?.autorizacionFecha) : null,
+    autorizacionVersion,
+    // Solo con la política 2.0 o posterior la alcaldía puede ver los datos de la familia
+    autorizaAlcaldia: autorizaAlcaldia(autorizacionVersion),
     updatedBy: usuario.id,
     updatedAt: ahora,
   };
@@ -80,4 +85,4 @@ export async function POST(req: Request) {
     personas: personas.length,
   });
   return Response.json({ ok: true, id: resultado.id, codigo: resultado.codigo });
-}
+});

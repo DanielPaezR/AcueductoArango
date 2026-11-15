@@ -9,16 +9,21 @@ import { ICONOS } from "./iconos";
 import type { ItemNav } from "./nav";
 import { SyncIndicador, SyncMotor } from "./sync-status";
 
-function Marca({ className = "" }: { className?: string }) {
+type MarcaShell = { titulo: string; subtitulo?: string };
+
+function Marca({ marca, className = "" }: { marca: MarcaShell; className?: string }) {
   return (
-    <Link href="/" className={`flex items-center gap-2.5 font-bold tracking-tight text-white ${className}`}>
+    <Link href="/" className={`flex min-w-0 items-center gap-2.5 font-bold tracking-tight text-white ${className}`}>
       <svg viewBox="0 0 32 32" className="size-8 shrink-0" aria-hidden>
         <rect width="32" height="32" rx="7" fill="#f6f7f4" />
         <path d="M16 6 5 15h3v10h16V15h3z" fill="#1f5a3a" />
         <path d="M5 25h22v2.5H5z" fill="#1f6698" />
         <rect x="13.5" y="17" width="5" height="8" rx="1" fill="#f6f7f4" />
       </svg>
-      <span className="text-[1.1rem] leading-none">JAC Arango</span>
+      <span className="min-w-0">
+        <span className="block truncate text-[1.1rem] leading-tight">{marca.titulo}</span>
+        {marca.subtitulo && <span className="block truncate text-xs font-semibold text-marca-100/80">{marca.subtitulo}</span>}
+      </span>
     </Link>
   );
 }
@@ -28,6 +33,7 @@ export function Shell({
   faseActual,
   accionPrincipal,
   usuario,
+  marca,
   children,
 }: {
   items: ItemNav[];
@@ -35,6 +41,8 @@ export function Shell({
   /** Botón central de la barra inferior según lo que más hace este usuario en campo. */
   accionPrincipal: { href: string; label: string } | null;
   usuario: { nombre: string; rolLabel: string };
+  /** Nombre que se ve arriba: la Junta de la vereda o la alcaldía. */
+  marca: MarcaShell;
   children: React.ReactNode;
 }) {
   const [abierto, setAbierto] = useState(false);
@@ -52,22 +60,25 @@ export function Shell({
       document.body.style.overflow = antes;
     };
   }, [abierto]);
-  const activo = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
+  const activo = (href: string) => (href === "/" || href === "/municipio" ? path === href : path.startsWith(href));
   const disponible = (i: ItemNav) => (i.fase ?? 0) <= faseActual;
 
   const enlace = (i: ItemNav) => {
     const Icono = ICONOS[i.icono];
     const a = activo(i.href);
+    const clase = `flex min-h-11 items-center gap-3 rounded-lg px-3 text-[0.95rem] font-semibold transition-colors ${
+      a ? "bg-stone-50 text-marca-900" : "text-marca-50 hover:bg-white/10"
+    }`;
+    // Las direcciones /api/ hacen algo al abrirse (p. ej. cambiar de vereda): enlace normal, sin precarga
+    if (i.href.startsWith("/api/"))
+      return (
+        <a key={i.href} href={i.href} className={clase}>
+          <Icono className="size-5 shrink-0" aria-hidden />
+          {i.label}
+        </a>
+      );
     return (
-      <Link
-        key={i.href}
-        href={i.href}
-        onClick={() => setAbierto(false)}
-        aria-current={a ? "page" : undefined}
-        className={`flex min-h-11 items-center gap-3 rounded-lg px-3 text-[0.95rem] font-semibold transition-colors ${
-          a ? "bg-stone-50 text-marca-900" : "text-marca-50 hover:bg-white/10"
-        }`}
-      >
+      <Link key={i.href} href={i.href} onClick={() => setAbierto(false)} aria-current={a ? "page" : undefined} className={clase}>
         <Icono className="size-5 shrink-0" aria-hidden />
         {i.label}
       </Link>
@@ -124,12 +135,22 @@ export function Shell({
   );
 
   // Barra inferior del celular: las tareas de campo, al alcance del pulgar
-  const preferidas = ["/", "/mapa", "/viviendas", "/novedades", "/acueducto", "/mantenimientos", "/libros"];
+  const preferidas = ["/", "/municipio", "/mapa", "/municipio/mapa", "/viviendas", "/municipio/veredas", "/novedades", "/municipio/proyectos", "/acueducto", "/mantenimientos", "/libros"];
   const tabs = preferidas
     .map((h) => items.find((i) => i.href === h && disponible(i)))
     .filter((i): i is ItemNav => Boolean(i))
     .slice(0, accionPrincipal ? 3 : 4);
-  const CORTO: Record<string, string> = { "/mapa": "Mapa", "/acueducto": "Red", "/mantenimientos": "Arreglos", "/novedades": "Novedades", "/libros": "Libros" };
+  const CORTO: Record<string, string> = {
+    "/mapa": "Mapa",
+    "/acueducto": "Red",
+    "/mantenimientos": "Arreglos",
+    "/novedades": "Novedades",
+    "/libros": "Libros",
+    "/municipio": "Tablero",
+    "/municipio/mapa": "Mapa",
+    "/municipio/veredas": "Veredas",
+    "/municipio/proyectos": "Ayudas",
+  };
 
   return (
     <div className="flex min-h-dvh">
@@ -138,7 +159,7 @@ export function Shell({
       {/* Riel de escritorio */}
       <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col bg-marca-800 lg:flex">
         <div className="flex items-center justify-between px-5 pt-5 pb-3">
-          <Marca />
+          <Marca marca={marca} />
         </div>
         <div className="px-5 pb-2">
           <SyncIndicador />
@@ -164,7 +185,7 @@ export function Shell({
         inert={!abierto}
       >
         <div className="flex items-center justify-between px-5 pt-5 pb-3">
-          <Marca />
+          <Marca marca={marca} />
           <button onClick={() => setAbierto(false)} className="rounded-lg p-2 text-marca-50 hover:bg-white/10" aria-label="Cerrar menú">
             <X className="size-6" />
           </button>
@@ -175,7 +196,7 @@ export function Shell({
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex items-center gap-3 bg-marca-800 px-4 py-3 lg:hidden">
-          <Marca />
+          <Marca marca={marca} />
           <div className="ml-auto">
             <SyncIndicador />
           </div>

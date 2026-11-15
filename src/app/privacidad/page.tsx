@@ -1,18 +1,20 @@
+import { responsableActual } from "@/lib/veredas";
 import { PaginaLegal } from "@/components/pagina-legal";
-import { datosResponsable, VERSION_POLITICA, VIGENCIA } from "@/lib/legal";
+import { PLATAFORMA, VERSION_POLITICA, VIGENCIA } from "@/lib/legal";
 
 export const metadata = {
   title: "Política de tratamiento de datos personales",
-  description: "Cómo la JAC de la vereda Arango recoge, usa y protege los datos personales (Ley 1581 de 2012).",
+  description: "Cómo las Juntas de Acción Comunal de las veredas de Concepción recogen, usa y protege los datos personales (Ley 1581 de 2012).",
 };
 
-export default function Privacidad() {
-  const r = datosResponsable();
+export default async function Privacidad({ searchParams }: PageProps<"/privacidad">) {
+  const sp = await searchParams;
+  const r = await responsableActual(typeof sp.vereda === "string" ? sp.vereda : null);
   return (
     <PaginaLegal titulo="Política de tratamiento de datos personales" version={VERSION_POLITICA} vigencia={VIGENCIA}>
       <p>
         Esta política explica cómo la <strong>{r.nombre}</strong> recoge, guarda, usa y protege los datos personales de las familias de la vereda,
-        de los usuarios del acueducto y de las personas que usan el sistema de información JAC Arango. Se expide en cumplimiento de los artículos 15
+        de los usuarios del acueducto y de las personas que usan el sistema de información de las veredas. Se expide en cumplimiento de los artículos 15
         y 20 de la Constitución Política, la Ley Estatutaria 1581 de 2012, el Decreto 1377 de 2013 (compilado en el Decreto Único 1074 de 2015) y
         demás normas que los modifiquen o complementen.
       </p>
@@ -69,12 +71,22 @@ export default function Privacidad() {
         <li>Conocer quién vive en la vereda y dónde, para la planeación y gestión comunitaria de la Junta.</li>
         <li>Prestar, mantener y cobrar el servicio de acueducto comunitario; llevar el estado de cuenta de cada suscriptor y contactarlo sobre cobros, cortes, daños y reparaciones.</li>
         <li>Organizar la entrega de ayudas, la participación en proyectos y las convocatorias de la Junta.</li>
-        <li>Caracterizar la población (hogares, grupos de edad, personas con discapacidad) y elaborar estadísticas e informes agregados, sin identificar personas, para la asamblea, la Alcaldía u otras entidades.</li>
+        <li>Caracterizar la población (hogares, grupos de edad, personas con discapacidad) y elaborar estadísticas e informes agregados, sin identificar personas, para la asamblea u otras entidades.</li>
         <li>Rendir cuentas a la comunidad: la página pública de transparencia muestra cifras agregadas y, en la consulta por cédula, solo el nombre abreviado, la matrícula y el estado de pago del titular.</li>
         <li>Cumplir obligaciones legales, contables y requerimientos de autoridades competentes.</li>
         <li>Garantizar la seguridad del sistema y la trazabilidad de las acciones de sus usuarios.</li>
+        <li>
+          Compartir los datos con la {PLATAFORMA.alcaldia} para que conozca la población de todas las veredas, planee y focalice sus programas, y
+          registre y haga seguimiento de las ayudas que entrega a cada familia.
+        </li>
       </ol>
-      <p>Los datos no se venden, no se usan con fines comerciales ni políticos y no se entregan a terceros sin autorización, salvo los casos que permite la ley.</p>
+      <p>
+        <strong>Datos compartidos con la alcaldía.</strong> Desde la versión 2.0 de esta política, al autorizar el tratamiento la familia autoriza
+        también que la {PLATAFORMA.alcaldia} acceda a sus datos para la finalidad 8. La alcaldía ve siempre las cifras de todas las veredas; los
+        nombres y datos de una familia los ve solo si esa familia dio la autorización con este texto (las autorizaciones anteriores solo cuentan
+        en las cifras). La alcaldía se obliga a usarlos solo para esas finalidades, a no publicarlos y a proteger su confidencialidad.
+      </p>
+      <p>Los datos no se venden, no se usan con fines comerciales ni políticos y no se entregan a otros terceros sin autorización, salvo los casos que permite la ley.</p>
 
       <h2>5. Datos de niñas, niños y adolescentes</h2>
       <p>

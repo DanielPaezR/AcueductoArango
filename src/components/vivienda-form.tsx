@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { Coordenadas } from "@/components/coordenadas";
 import { Campo, Opciones, Seccion, Select, SiNo, useGps } from "@/components/campos";
 import { Firma } from "@/components/firma";
-import { avisoVisita } from "@/lib/legal";
+import { autorizaAlcaldia, avisoVisita } from "@/lib/legal";
 import { MapaSelector } from "@/components/mapa/dinamicos";
 import { dbLocal } from "@/lib/offline/db";
 import { comprimirImagen, subirAhora } from "@/lib/offline/sync";
@@ -95,9 +95,15 @@ function Discapacidad({ p, onChange, compacto = false }: { p: PersonaInput; onCh
 export function ViviendaForm({
   sectores,
   inicial,
+  responsable,
+  autorizacionVersion,
 }: {
   sectores: Sector[];
   inicial?: { vivienda: Vivienda & { codigo?: string | null }; personas: PersonaInput[] };
+  /** Junta responsable de los datos (se nombra en el aviso que se lee a la familia). */
+  responsable: string;
+  /** Versión de la política con la que la familia autorizó (al editar). */
+  autorizacionVersion?: string | null;
 }) {
   const router = useRouter();
   const editando = Boolean(inicial);
@@ -598,7 +604,7 @@ export function ViviendaForm({
       <Seccion titulo="Autorización de datos personales" icono={Signature}>
         <div className="space-y-2 rounded-lg bg-stone-50 p-3 text-[0.95rem] text-stone-800 ring-1 ring-stone-200">
           <p className="font-semibold">Lea esto a la familia antes de preguntar sus datos:</p>
-          {avisoVisita().map((t) => (
+          {avisoVisita(responsable).map((t) => (
             <p key={t}>{t}</p>
           ))}
         </div>
@@ -606,6 +612,23 @@ export function ViviendaForm({
           <input type="checkbox" className="size-6 accent-marca-700" checked={v.autorizacionDatos} onChange={(e) => set("autorizacionDatos", e.target.checked)} />
           <span className="font-medium">La familia escuchó el aviso y autoriza el tratamiento de sus datos</span>
         </label>
+        {editando && inicial?.vivienda.autorizacionDatos && v.autorizacionDatos && !autorizaAlcaldia(autorizacionVersion) && (
+          <label className="flex items-start gap-3 rounded-lg bg-ocre-50 p-3 ring-1 ring-ocre-100">
+            <input
+              type="checkbox"
+              className="mt-0.5 size-6 shrink-0 accent-ocre-800"
+              checked={Boolean(v.renovarAutorizacion)}
+              onChange={(e) => set("renovarAutorizacion", e.target.checked)}
+            />
+            <span>
+              <span className="font-semibold">Renovar la autorización con el aviso nuevo</span>
+              <span className="block text-sm text-stone-700">
+                Esta familia autorizó antes de que los datos se compartieran con la alcaldía: la alcaldía solo la ve en cifras. Si hoy le leyó el
+                aviso de arriba y está de acuerdo, márquelo.
+              </span>
+            </span>
+          </label>
+        )}
         {v.autorizacionDatos && (
           <>
             <div className="grid gap-3 sm:grid-cols-2">

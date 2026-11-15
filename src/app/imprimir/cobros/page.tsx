@@ -3,12 +3,14 @@ import { db, schema } from "@/db";
 import { fechaCorta, hoyBogota, nombreMes, pesos } from "@/lib/dinero";
 import { estadoSuscriptores } from "@/lib/finanzas";
 import { requerirPermiso } from "@/lib/session";
+import { nombreVereda } from "@/lib/veredas";
 
 export const metadata = { title: "Cuentas de cobro" };
 
 /** Una cuenta de cobro por suscriptor activo, dos por hoja, para repartir en la vereda. */
 export default async function Cobros({ searchParams }: PageProps<"/imprimir/cobros">) {
   await requerirPermiso("facturacion", "ver");
+  const vereda = await nombreVereda();
   const sp = await searchParams;
   const [anio, mes] = (typeof sp.mes === "string" ? sp.mes : hoyBogota().slice(0, 7)).split("-").map(Number);
   const periodo = await db.query.periodos.findFirst({ where: and(eq(schema.periodos.anio, anio), eq(schema.periodos.mes, mes)) });
@@ -35,7 +37,7 @@ export default async function Cobros({ searchParams }: PageProps<"/imprimir/cobr
           <article key={e.id} className="break-inside-avoid rounded-xl border-2 border-stone-800 p-5 print:h-[48vh] print:rounded-none print:border-x-0 print:border-t-0 print:border-b-2 print:border-dashed">
             <header className="flex items-start justify-between gap-4 border-b border-stone-800 pb-2">
               <div>
-                <p className="font-bold">JAC Arango · Acueducto veredal</p>
+                <p className="font-bold">JAC {vereda} · Acueducto veredal</p>
                 <p className="text-sm text-stone-700">Cuenta de cobro de {nombreMes(mes)} {anio}</p>
               </div>
               <p className="num text-right font-bold">Matrícula {e.codigo}</p>

@@ -2,10 +2,10 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "JAC Arango", template: "%s · JAC Arango" },
-  description: "Censo, mapa y acueducto de la vereda Arango, Concepción (Antioquia)",
+  title: { default: "Veredas de Concepción", template: "%s · Veredas de Concepción" },
+  description: "Censo, libros y gestión de las Juntas de Acción Comunal de Concepción (Antioquia) y su alcaldía",
   icons: { icon: "/icons/icon-192.png", apple: "/icons/icon-192.png" },
-  appleWebApp: { capable: true, title: "JAC Arango", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "Veredas", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

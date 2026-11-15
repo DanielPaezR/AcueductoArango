@@ -1,13 +1,12 @@
-import { datosResponsable } from "@/lib/legal";
+import type { Responsable } from "@/lib/legal";
 
 /** Compromiso que aceptan los usuarios internos (también se muestra en /terminos). */
-export function CompromisoUsuarios() {
-  const r = datosResponsable();
+export function CompromisoUsuarios({ r }: { r: Responsable }) {
   return (
     <>
       <h2>Compromiso de los usuarios del sistema</h2>
       <p>
-        Quien recibe un usuario de JAC Arango (directivos, encuestadores, fontanero, tesorería u otros) actúa por cuenta de la {r.nombre} y se
+        Quien recibe un usuario de la plataforma (directivos, encuestadores, fontanero, tesorería u otros) actúa por cuenta de la {r.nombre} y se
         compromete a:
       </p>
       <ol>

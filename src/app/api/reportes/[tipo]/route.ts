@@ -201,7 +201,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ tipo: string }
   if (u instanceof Response) return u;
 
   const libro = new ExcelJS.Workbook();
-  libro.creator = "JAC Arango";
+  libro.creator = `JAC ${u.vereda?.nombre ?? ""}`;
   const hoja = libro.addWorksheet(r.nombre.slice(0, 31), { views: [{ state: "frozen", ySplit: 1 }] });
   hoja.columns = r.columnas.map((c) => ({
     header: c.titulo,
@@ -223,7 +223,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ tipo: string }
   return new Response(buffer, {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="JAC-Arango-${tipo}-${fecha}.xlsx"`,
+      "Content-Disposition": `attachment; filename="JAC-${u.vereda?.slug ?? "vereda"}-${tipo}-${fecha}.xlsx"`,
     },
   });
 }

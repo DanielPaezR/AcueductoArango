@@ -1,3 +1,4 @@
+import { PLATAFORMA } from "@/lib/legal";
 import { redirect } from "next/navigation";
 import { usuarioActual } from "@/lib/session";
 import { LoginForm } from "./login-form";
@@ -15,8 +16,8 @@ export default async function LoginPage() {
           <path d="M5 25h22v2.5H5z" fill="#1f6698" />
           <rect x="13.5" y="17" width="5" height="8" rx="1" fill="#f6f7f4" />
         </svg>
-        <h1 className="text-[2rem] leading-tight font-bold text-white">JAC Arango</h1>
-        <p className="mt-1 text-lg text-marca-100">Junta de Acción Comunal · Concepción, Antioquia</p>
+        <h1 className="text-[2rem] leading-tight font-bold text-white">{PLATAFORMA.nombre}</h1>
+        <p className="mt-1 text-lg text-marca-100">Juntas de Acción Comunal y alcaldía · {PLATAFORMA.municipio}</p>
       </div>
 
       <div className="flex-1 rounded-t-3xl bg-stone-50 px-6 pt-8 pb-12 sm:w-full sm:max-w-md sm:flex-none sm:rounded-2xl sm:p-8">

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ViviendaForm } from "@/components/vivienda-form";
 import { listarSectores, obtenerVivienda } from "@/lib/consultas";
 import { requerirPermiso } from "@/lib/session";
+import { responsableActual } from "@/lib/veredas";
 import type { PersonaInput } from "@/lib/validacion";
 
 export const metadata = { title: "Editar vivienda" };
@@ -11,7 +12,7 @@ export const metadata = { title: "Editar vivienda" };
 export default async function EditarVivienda({ params }: PageProps<"/viviendas/[id]/editar">) {
   await requerirPermiso("censo", "editar");
   const { id } = await params;
-  const [d, sectores] = await Promise.all([obtenerVivienda(id), listarSectores()]);
+  const [d, sectores, r] = await Promise.all([obtenerVivienda(id), listarSectores(), responsableActual()]);
   if (!d) notFound();
   const { v } = d;
 
@@ -20,6 +21,8 @@ export default async function EditarVivienda({ params }: PageProps<"/viviendas/[
       <Link href={`/viviendas/${id}`} className="font-semibold text-marca-700 hover:underline">← Volver a la ficha</Link>
       <h1 className="text-[1.75rem] leading-tight font-bold">Editar {v.codigo}</h1>
       <ViviendaForm
+        responsable={r.nombre}
+        autorizacionVersion={v.autorizacionVersion}
         sectores={sectores.map((s) => ({ id: s.id, nombre: s.nombre }))}
         inicial={{
           vivienda: {

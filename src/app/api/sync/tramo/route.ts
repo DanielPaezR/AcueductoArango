@@ -1,13 +1,13 @@
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { usuarioApi } from "@/lib/api";
+import { conRls, usuarioApi } from "@/lib/api";
 import { auditar } from "@/lib/auditoria";
 import { puede } from "@/lib/permisos";
 import { longitudMetros } from "@/lib/red";
 import { tramoSchema } from "@/lib/validacion";
 
 /** Crea o actualiza un tramo de tubería. Idempotente por UUID. */
-export async function POST(req: Request) {
+export const POST = conRls(async (req: Request) => {
   const u = await usuarioApi();
   if (u instanceof Response) return u;
   const p = tramoSchema.safeParse(await req.json().catch(() => null));
@@ -30,4 +30,4 @@ export async function POST(req: Request) {
     .onConflictDoUpdate({ target: schema.tramosAcueducto.id, set: datos });
   await auditar(u.id, existente ? "editar" : "crear", "tramo", p.data.id, { tipo: p.data.tipo, puntos: p.data.coordenadas.length });
   return Response.json({ ok: true, id: p.data.id });
-}
+});

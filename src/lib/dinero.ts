@@ -105,3 +105,8 @@ export const MEDIO_LABEL: Record<string, string> = {
   nequi: "Nequi",
   daviplata: "Daviplata",
 };
+
+/** Fecha (YYYY-MM-DD, hora de Colombia) de hace `n` días. */
+export function haceDias(n: number) {
+  return new Date(Date.now() - n * 864e5).toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
+}

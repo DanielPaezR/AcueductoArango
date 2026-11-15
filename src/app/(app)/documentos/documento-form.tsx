@@ -42,7 +42,7 @@ export function DocumentoForm({ inicial, categoria }: { inicial?: Inicial; categ
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <label className="label" htmlFor="titulo">Nombre del documento</label>
-          <input id="titulo" name="titulo" className="input" placeholder="Ej: Estatutos de la JAC vereda Arango" defaultValue={inicial?.titulo} required />
+          <input id="titulo" name="titulo" className="input" placeholder="Ej: Estatutos de la Junta de Acción Comunal" defaultValue={inicial?.titulo} required />
         </div>
         <div>
           <label className="label" htmlFor="categoria">Tipo</label>

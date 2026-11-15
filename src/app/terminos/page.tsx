@@ -1,15 +1,17 @@
+import { responsableActual } from "@/lib/veredas";
 import { PaginaLegal } from "@/components/pagina-legal";
 import { CompromisoUsuarios } from "@/components/texto-terminos";
-import { datosResponsable, VERSION_TERMINOS, VIGENCIA } from "@/lib/legal";
+import { VERSION_TERMINOS, VIGENCIA } from "@/lib/legal";
 
-export const metadata = { title: "Términos y condiciones de uso", description: "Condiciones de uso del sistema JAC Arango y de su página pública." };
+export const metadata = { title: "Términos y condiciones de uso", description: "Condiciones de uso de la plataforma de las veredas y de sus páginas públicas." };
 
-export default function Terminos() {
-  const r = datosResponsable();
+export default async function Terminos({ searchParams }: PageProps<"/terminos">) {
+  const sp = await searchParams;
+  const r = await responsableActual(typeof sp.vereda === "string" ? sp.vereda : null);
   return (
     <PaginaLegal titulo="Términos y condiciones de uso" version={VERSION_TERMINOS} vigencia={VIGENCIA}>
       <p>
-        JAC Arango es el sistema de información de la <strong>{r.nombre}</strong> ({r.municipio}) para el censo de la vereda, la gestión del
+        Esta plataforma es el sistema de información de la <strong>{r.nombre}</strong> ({r.municipio}) para el censo de la vereda, la gestión del
         acueducto comunitario, sus cobros y su tesorería. Al usar el sistema o su página pública usted acepta estos términos.
       </p>
 
@@ -45,7 +47,7 @@ export default function Terminos() {
         que hace parte de estos términos.
       </p>
 
-      <CompromisoUsuarios />
+      <CompromisoUsuarios r={r} />
 
       <h2>Disponibilidad y responsabilidad</h2>
       <p>

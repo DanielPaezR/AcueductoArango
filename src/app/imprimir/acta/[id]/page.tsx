@@ -2,7 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db";
 import { fechaLarga } from "@/lib/dinero";
-import { datosResponsable } from "@/lib/legal";
+import { responsableActual } from "@/lib/veredas";
 import { TIPOS_ACTA } from "@/lib/opciones";
 import { requerirPermiso } from "@/lib/session";
 
@@ -14,7 +14,7 @@ export default async function ImprimirActa({ params }: PageProps<"/imprimir/acta
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const a = await db.query.actas.findFirst({ where: and(eq(schema.actas.id, id), isNull(schema.actas.deletedAt)) });
   if (!a) notFound();
-  const r = datosResponsable();
+  const r = await responsableActual();
   const bloque = (t: string, v: string | null) =>
     v ? (
       <section className="mt-4 break-inside-avoid-page">

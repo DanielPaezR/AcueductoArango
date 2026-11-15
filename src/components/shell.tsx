@@ -14,11 +14,13 @@ type MarcaShell = { titulo: string; subtitulo?: string };
 function Marca({ marca, className = "" }: { marca: MarcaShell; className?: string }) {
   return (
     <Link href="/" className={`flex min-w-0 items-center gap-2.5 font-bold tracking-tight text-white ${className}`}>
-      <svg viewBox="0 0 32 32" className="size-8 shrink-0" aria-hidden>
-        <rect width="32" height="32" rx="7" fill="#f6f7f4" />
-        <path d="M16 6 5 15h3v10h16V15h3z" fill="#1f5a3a" />
-        <path d="M5 25h22v2.5H5z" fill="#1f6698" />
-        <rect x="13.5" y="17" width="5" height="8" rx="1" fill="#f6f7f4" />
+      <svg viewBox="0 0 512 512" className="size-8 shrink-0 rounded-[7px]" aria-hidden>
+        <rect width="512" height="512" fill="#f6f7f4" />
+        <path d="M256 440C256 440 120 304 120 204A136 136 0 1 1 392 204C392 304 256 440 256 440Z" fill="#1f5a3a" />
+        <path d="M176 210L256 140L336 210Z" fill="#f6f7f4" />
+        <rect x="194" y="202" width="124" height="78" fill="#f6f7f4" />
+        <rect x="194" y="268" width="124" height="12" fill="#1f6698" />
+        <rect x="240" y="226" width="32" height="42" rx="5" fill="#1f5a3a" />
       </svg>
       <span className="min-w-0">
         <span className="block truncate text-[1.1rem] leading-tight">{marca.titulo}</span>

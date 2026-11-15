@@ -1,5 +1,5 @@
 /**
- * Modelo de datos — JAC Arango (censo + acueducto de la vereda)
+ * Modelo de datos — plataforma de las veredas (cada Junta es un inquilino; la alcaldía ve todas)
  *
  * Convenciones:
  * - Las entidades que se pueden crear en campo (offline) usan UUID como PK para que
@@ -65,7 +65,7 @@ const veredaActual = sql`nullif(current_setting('app.vereda_id', true), '')::int
 export const veredas = pgTable("veredas", {
   id: serial("id").primaryKey(),
   nombre: varchar("nombre", { length: 100 }).notNull(),
-  /** Para enlaces públicos: /transparencia?vereda=arango */
+  /** Para enlaces públicos: /transparencia?vereda=el-roble */
   slug: varchar("slug", { length: 60 }).notNull().unique(),
   municipio: varchar("municipio", { length: 80 }).notNull().default("Concepción"),
   departamento: varchar("departamento", { length: 80 }).notNull().default("Antioquia"),
@@ -272,10 +272,27 @@ export const proyectos = pgTable("proyectos", {
   fechaInicio: date("fecha_inicio"),
   fechaFin: date("fecha_fin"),
   estado: varchar("estado", { length: 20 }).notNull().default("activo"),
+  /** Proyectos de la alcaldía: cuántas familias se van a ayudar en total (se reparte en cupos por vereda). */
+  cupoFamilias: integer("cupo_familias"),
   createdBy: uuid("created_by").references(() => usuarios.id),
   ...timestamps,
   ...softDelete,
 });
+
+/** Cuántas familias puede registrar cada vereda en un proyecto de la alcaldía. */
+export const proyectoCupos = pgTable(
+  "proyecto_cupos",
+  {
+    proyectoId: uuid("proyecto_id")
+      .notNull()
+      .references(() => proyectos.id),
+    veredaId: integer("vereda_id")
+      .notNull()
+      .references(() => veredas.id),
+    cupo: integer("cupo").notNull(),
+  },
+  (t) => [uniqueIndex("proyecto_cupos_pk").on(t.proyectoId, t.veredaId)],
+);
 
 export const participaciones = pgTable(
   "participaciones",

@@ -7,13 +7,13 @@
 web
 
 ## Users
-- **Primary: field work on a phone.** The JAC president (admin), survey volunteers (encuestadores) and the plumber (fontanero) visiting houses and the water network across the rural vereda Arango (Concepción, Antioquia, Colombia): outdoors, often in direct sun, with weak or no mobile signal, sometimes one-handed.
+- **Primary: field work on a phone.** The JAC president (admin), survey volunteers (encuestadores) and the plumber (fontanero) visiting houses and the water network across the rural veredas of Concepción (Antioquia, Colombia): outdoors, often in direct sun, with weak or no mobile signal, sometimes one-handed.
 - **Secondary: office work.** Admins and the treasurer reviewing households, water subscribers, payments and reports, on a phone or a basic PC.
 - **Future:** water subscribers checking their own account statement (pending, not built).
 - Confirmed: users include **older adults** and people with **little digital experience**, and many use **low-end phones**.
 
 ## Product Purpose
-JAC Arango is the community information system of the Junta de Acción Comunal of vereda Arango. It replaces nonexistent or scattered records with:
+Veredas de Concepción is the information platform of the Juntas de Acción Comunal of Concepción and their alcaldía; each vereda sees only its own data and the alcaldía sees all of them. It replaces nonexistent or scattered records with:
 - a georeferenced census of every house and its members (500–700 houses);
 - a record of aid and community-project participation;
 - a map of the community water system (acueducto): intake, tanks, valves, pipes, and the plumber's repair log with photos and material invoices;
@@ -41,7 +41,7 @@ Built for one specific vereda and its JAC, by and for the community: the data is
 - Undecided: final brand colors (user asked to reference the flag of Concepción, Antioquia; exact colors not yet confirmed).
 
 ## Brand Commitments
-- Name: **JAC Arango**.
+- Name: **Veredas de Concepción** (inside a vereda: "JAC <vereda>"). App icon: map pin with a house over the hills (`public/icons/icon.svg`).
 - Visual reference requested by the user: the colors of the municipality of Concepción, Antioquia (to be confirmed from the official flag before being treated as binding).
 - Voice: plain, respectful Colombian Spanish; "usted"-neutral, no jargon, no English.
 

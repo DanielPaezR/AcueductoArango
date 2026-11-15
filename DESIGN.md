@@ -1,4 +1,4 @@
-# Design — JAC Arango
+# Design — Veredas de Concepción
 
 World: **Fachadas de Concepción.** The app is the vereda's house front: a whitewashed working
 surface where painted woodwork carries meaning. Surface mode: Operate (field work on low-end phones,

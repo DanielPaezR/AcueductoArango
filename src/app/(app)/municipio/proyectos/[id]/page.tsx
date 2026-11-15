@@ -10,7 +10,7 @@ import { familiasElegibles } from "@/lib/municipio";
 import { puede } from "@/lib/permisos";
 import { requerirMunicipio } from "@/lib/session";
 import { listarVeredas } from "@/lib/veredas";
-import { BeneficiarioForm, EstadoProyectoBotones, QuitarBeneficiario } from "../forms";
+import { BeneficiarioForm, CuposForm, EstadoProyectoBotones, QuitarBeneficiario } from "../forms";
 
 export const metadata = { title: "Proyecto" };
 
@@ -21,7 +21,7 @@ export default async function ProyectoMunicipal({ params, searchParams }: PagePr
   const sp = await searchParams;
   const q = typeof sp.q === "string" ? sp.q.trim().slice(0, 60) : "";
   const veredaFiltro = Number(sp.vereda) || undefined;
-  const { rows: pr } = await db.execute<{ id: string; nombre: string; tipo: string; entidad: string | null; descripcion: string | null; estado: string; fecha_inicio: string | null; fecha_fin: string | null; vereda: string | null }>(
+  const { rows: pr } = await db.execute<{ id: string; nombre: string; tipo: string; entidad: string | null; descripcion: string | null; estado: string; fecha_inicio: string | null; fecha_fin: string | null; vereda: string | null; cupo_familias: number | null }>(
     sql`select pr.*, pr.fecha_inicio::text, pr.fecha_fin::text, ve.nombre as vereda from proyectos pr left join veredas ve on ve.id = pr.vereda_id where pr.id = ${id} and pr.deleted_at is null`,
   );
   const p = pr[0];
@@ -40,6 +40,10 @@ export default async function ProyectoMunicipal({ params, searchParams }: PagePr
     listarVeredas(),
     puedeRegistrar && (q || veredaFiltro) ? familiasElegibles(q, veredaFiltro) : Promise.resolve([]),
   ]);
+  const { rows: cuposFilas } = await db.execute<{ vereda_id: number; cupo: number }>(sql`select vereda_id, cupo from proyecto_cupos where proyecto_id = ${id}`);
+  const cupos = Object.fromEntries(cuposFilas.map((c) => [c.vereda_id, c.cupo])) as Record<number, number>;
+  const usadasPor = (nombre: string) => new Set(filas.filter((f) => f.vereda === nombre).map((f) => f.vivienda_id)).size;
+  const conCupo = municipal && p.cupo_familias !== null;
   const porVereda = [...new Set(filas.map((f) => f.vereda))].map((v) => ({ etiqueta: v, valor: new Set(filas.filter((f) => f.vereda === v).map((f) => f.vivienda_id)).size }));
   const total = filas.reduce((a, f) => a + Number(f.valor ?? 0), 0);
 
@@ -83,6 +87,55 @@ export default async function ProyectoMunicipal({ params, searchParams }: PagePr
           </div>
         )}
       </section>
+
+      {municipal && (
+        <section className="tarjeta space-y-3" aria-labelledby="cupos">
+          <h2 id="cupos" className="text-lg font-bold">Cupos por vereda</h2>
+          {conCupo ? (
+            <>
+              <p className="text-stone-700">
+                Se ayudará a <strong className="num">{p.cupo_familias}</strong> familias. Cada Junta solo puede registrar las de su cupo.
+              </p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[0.95rem]">
+                  <thead className="text-left text-sm text-stone-600">
+                    <tr>
+                      <th className="py-1.5 font-semibold">Vereda</th>
+                      <th className="py-1.5 text-right font-semibold">Cupo</th>
+                      <th className="py-1.5 text-right font-semibold">Registradas</th>
+                      <th className="py-1.5 text-right font-semibold">Disponibles</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {veredas.map((v) => {
+                      const cupo = cupos[v.id] ?? 0;
+                      const usadas = usadasPor(v.nombre);
+                      return (
+                        <tr key={v.id} className="border-t border-stone-100">
+                          <td className="py-1.5">{v.nombre}</td>
+                          <td className="num py-1.5 text-right">{cupo}</td>
+                          <td className="num py-1.5 text-right">{usadas}</td>
+                          <td className={`num py-1.5 text-right font-bold ${cupo - usadas <= 0 ? "text-stone-500" : ""}`}>{Math.max(0, cupo - usadas)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : (
+            <p className="text-stone-700">Sin límite: cada Junta puede registrar las familias que necesite.</p>
+          )}
+          {puede(u, "municipio_ayudas", "editar") && p.estado === "activo" && (
+            <details className="rounded-lg border border-stone-200 p-3">
+              <summary className="cursor-pointer font-semibold">{conCupo ? "Cambiar el total o el reparto" : "Fijar cuántas familias y repartirlas"}</summary>
+              <div className="mt-3">
+                <CuposForm proyectoId={p.id} total={p.cupo_familias} cupos={cupos} veredas={veredas.map((v) => ({ id: v.id, nombre: v.nombre, usadas: usadasPor(v.nombre) }))} />
+              </div>
+            </details>
+          )}
+        </section>
+      )}
 
       {puedeRegistrar && (
         <section className="tarjeta space-y-4" aria-labelledby="registrar">

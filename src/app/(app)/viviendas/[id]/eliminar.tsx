@@ -27,7 +27,7 @@ export function SuprimirDatos({ id }: { id: string }) {
         className="btn-peligro"
         disabled={pendiente}
         onClick={() => {
-          const motivo = prompt("¿Quién lo pidió, cuándo y por qué medio? (Ej: Rosa Arango, por WhatsApp, 10 de noviembre)");
+          const motivo = prompt("¿Quién lo pidió, cuándo y por qué medio? (Ej: Rosa Restrepo, por WhatsApp, 10 de noviembre)");
           if (motivo && confirm("Se borrarán nombres, documentos, teléfonos, edades, fotos y firma de esta familia. No se puede deshacer. ¿Continuar?"))
             start(async () => {
               try {

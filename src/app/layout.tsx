@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: { default: "Veredas de Concepción", template: "%s · Veredas de Concepción" },
   description: "Censo, libros y gestión de las Juntas de Acción Comunal de Concepción (Antioquia) y su alcaldía",
-  icons: { icon: "/icons/icon-192.png", apple: "/icons/icon-192.png" },
+  icons: { icon: [{ url: "/icons/icon.svg", type: "image/svg+xml" }, { url: "/icons/favicon-32.png", sizes: "32x32" }], apple: "/icons/apple-touch-icon.png" },
   appleWebApp: { capable: true, title: "Veredas", statusBarStyle: "default" },
 };
 

@@ -6,6 +6,7 @@ import { ESTADOS_PROYECTO, TIPOS_PROYECTO } from "@/lib/ayudas";
 import { fechaCorta, pesos } from "@/lib/dinero";
 import { puede } from "@/lib/permisos";
 import { requerirMunicipio } from "@/lib/session";
+import { listarVeredas } from "@/lib/veredas";
 import { NuevoProyectoForm } from "./forms";
 
 export const metadata = { title: "Proyectos y ayudas" };
@@ -14,9 +15,9 @@ export default async function ProyectosMunicipales() {
   const u = await requerirMunicipio("municipio_ayudas", "ver", "/municipio/proyectos");
   const { rows } = await db.execute<{
     id: string; nombre: string; tipo: string; entidad: string | null; estado: string; fecha_inicio: string | null;
-    vereda: string | null; familias: number; veredas: number; valor: number;
+    vereda: string | null; familias: number; veredas: number; valor: number; cupo: number | null;
   }>(sql`
-    select pr.id, pr.nombre, pr.tipo, pr.entidad, pr.estado, pr.fecha_inicio::text, ve.nombre as vereda,
+    select pr.id, pr.nombre, pr.tipo, pr.entidad, pr.estado, pr.fecha_inicio::text, ve.nombre as vereda, pr.cupo_familias as cupo,
       (select count(distinct pa.vivienda_id) from participaciones pa where pa.proyecto_id = pr.id and pa.deleted_at is null)::int as familias,
       (select count(distinct pa.vereda_id) from participaciones pa where pa.proyecto_id = pr.id and pa.deleted_at is null)::int as veredas,
       coalesce((select sum(pa.valor_estimado) from participaciones pa where pa.proyecto_id = pr.id and pa.deleted_at is null), 0)::float as valor
@@ -37,7 +38,7 @@ export default async function ProyectosMunicipales() {
           </span>
         </span>
         <span className="num shrink-0 text-right text-sm text-stone-700">
-          <strong className="block text-base">{r.familias} familia(s)</strong>
+          <strong className="block text-base">{r.cupo ? `${r.familias} de ${r.cupo} familias` : `${r.familias} familia(s)`}</strong>
           {r.veredas > 0 && `${r.veredas} vereda(s)`}
           {r.valor > 0 && <span className="block">{pesos(r.valor)}</span>}
         </span>
@@ -60,7 +61,7 @@ export default async function ProyectosMunicipales() {
         <details className="tarjeta">
           <summary className="cursor-pointer text-lg font-bold">Crear proyecto o ayuda de la alcaldía</summary>
           <div className="mt-4">
-            <NuevoProyectoForm />
+            <NuevoProyectoForm veredas={(await listarVeredas()).map((v) => ({ id: v.id, nombre: v.nombre }))} />
           </div>
         </details>
       )}

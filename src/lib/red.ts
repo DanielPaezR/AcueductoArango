@@ -19,7 +19,7 @@ export const TIPOS_ELEMENTO = {
 export type TipoElemento = keyof typeof TIPOS_ELEMENTO;
 
 export const CAMPOS_DATOS: Record<string, { label: string; numero?: boolean; placeholder?: string }> = {
-  fuente: { label: "Fuente de agua", placeholder: "Ej: Quebrada La Arango" },
+  fuente: { label: "Fuente de agua", placeholder: "Ej: Quebrada La Honda" },
   caudalLps: { label: "Caudal (litros por segundo)", numero: true },
   capacidadLitros: { label: "Capacidad (litros)", numero: true },
   material: { label: "Material", placeholder: "Concreto, plástico, ferrocemento…" },

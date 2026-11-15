@@ -92,6 +92,13 @@
       "when": 1794753613864,
       "tag": "0012_multivereda",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794756220572,
+      "tag": "0013_cupos",
+      "breakpoints": true
     }
   ]
 }

@@ -4,7 +4,6 @@ Plataforma para las **Juntas de Acción Comunal de las veredas de Concepción (A
 Cada vereda tiene su propio sistema (censo georreferenciado de viviendas y familias, libros de la Junta,
 novedades y obras, ayudas, acueducto opcional, página pública de cuentas) y **solo ve lo suyo**; la
 **alcaldía** ve todas las veredas en un tablero municipal con métricas, mapa, población, proyectos y ayudas.
-La primera vereda es **Arango**.
 
 - Producción: <https://veredaarango-production.up.railway.app>
 - Página pública: `/transparencia` · Política de datos: `/privacidad` · Términos: `/terminos`

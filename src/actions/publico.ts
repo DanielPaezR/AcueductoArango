@@ -18,7 +18,7 @@ function permitido(ip: string) {
   return true;
 }
 
-/** "Rosa Elena Arango Gómez" → "Rosa E. A. G." */
+/** "Rosa Elena Restrepo Gómez" → "Rosa E. R. G." */
 function abreviar(nombre: string) {
   const [primero, ...resto] = nombre.trim().split(/\s+/);
   return [primero, ...resto.map((p) => `${p[0]?.toUpperCase()}.`)].join(" ");

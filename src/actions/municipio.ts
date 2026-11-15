@@ -9,7 +9,10 @@ import { db, schema } from "@/db";
 import { conContexto, olvidarUsuario } from "@/db/contexto";
 import { auditar } from "@/lib/auditoria";
 import { accionesDe, esRolMunicipal, esSeccionMunicipal, PLANTILLAS, SECCIONES, type Permisos, type Rol } from "@/lib/permisos";
+import { cuposDelFormulario, repartoEquitativo, sumaCupos } from "@/lib/cupos";
+import { estadoCupo, insertarConCupo } from "@/lib/cupos-servidor";
 import { requerirMunicipio, type UsuarioSesion } from "@/lib/session";
+import { listarVeredas } from "@/lib/veredas";
 import type { Estado } from "./auth";
 
 /* ------------------------------------------------------------------ */
@@ -327,17 +330,69 @@ const proyectoSchema = z.object({
 });
 
 /** Proyecto de la alcaldía: lo ven todas las veredas y cada Junta puede anotar a sus familias. */
+/**
+ * Lee el total de familias y el reparto por vereda. Sin total = proyecto sin límite de cupos.
+ * Devuelve error si el reparto manual no suma el total.
+ */
+async function leerCupos(form: FormData): Promise<{ error?: string; total: number | null; cupos: Record<number, number> }> {
+  const txt = String(form.get("cupoFamilias") ?? "").trim();
+  if (!txt) return { total: null, cupos: {} };
+  const total = Math.floor(Number(txt.replace(/\D/g, "")));
+  if (!Number.isFinite(total) || total < 1 || total > 1_000_000) return { error: "Escriba cuántas familias se van a ayudar (un número mayor a 0)", total: null, cupos: {} };
+  const ids = (await listarVeredas()).map((v) => v.id);
+  const cupos = form.get("reparto") === "manual" ? cuposDelFormulario(form, ids) : repartoEquitativo(total, ids);
+  const suma = sumaCupos(cupos);
+  if (suma !== total)
+    return { error: `El reparto suma ${suma} familias y el total es ${total}: ajuste los cupos para que coincidan.`, total, cupos };
+  return { total, cupos };
+}
+
+/** Proyecto de la alcaldía: lo ven todas las veredas y cada Junta puede anotar a sus familias (hasta su cupo, si tiene). */
 export async function crearProyectoMunicipal(_: Estado, form: FormData): Promise<Estado> {
   const yo = await requerirMunicipio("municipio_ayudas", "crear");
+  const valores = Object.fromEntries(form) as Record<string, string>;
   const p = proyectoSchema.safeParse(Object.fromEntries(form));
-  if (!p.success) return { error: p.error.issues[0].message };
-  const [r] = await db
-    .insert(schema.proyectos)
-    .values({ ...p.data, veredaId: null, entidad: p.data.entidad ?? "Alcaldía", createdBy: yo.id })
-    .returning({ id: schema.proyectos.id });
-  await auditar(yo.id, "crear", "proyecto", r.id, p.data);
+  if (!p.success) return { error: p.error.issues[0].message, valores };
+  const c = await leerCupos(form);
+  if (c.error) return { error: c.error, valores };
+  const r = await db.transaction(async (tx) => {
+    const [r] = await tx
+      .insert(schema.proyectos)
+      .values({ ...p.data, veredaId: null, entidad: p.data.entidad ?? "Alcaldía", cupoFamilias: c.total, createdBy: yo.id })
+      .returning({ id: schema.proyectos.id });
+    const filas = Object.entries(c.cupos).map(([v, cupo]) => ({ proyectoId: r.id, veredaId: Number(v), cupo }));
+    if (filas.length) await tx.insert(schema.proyectoCupos).values(filas);
+    return r;
+  });
+  await auditar(yo.id, "crear", "proyecto", r.id, { ...p.data, cupoFamilias: c.total, cupos: c.cupos });
   revalidatePath("/municipio/proyectos");
   redirect(`/municipio/proyectos/${r.id}`);
+}
+
+/** Cambia el total de familias o su reparto. Ningún cupo puede quedar por debajo de lo ya registrado. */
+export async function guardarCupos(_: Estado, form: FormData): Promise<Estado> {
+  const yo = await requerirMunicipio("municipio_ayudas", "editar");
+  const id = String(form.get("proyectoId"));
+  const pr = await db.query.proyectos.findFirst({ where: eq(schema.proyectos.id, id) });
+  if (!pr || pr.veredaId !== null) return { error: "Proyecto no encontrado" };
+  const c = await leerCupos(form);
+  if (c.error) return { error: c.error };
+  for (const [v, cupo] of Object.entries(c.cupos)) {
+    const { usadas } = await estadoCupo(id, Number(v), db);
+    if (cupo < usadas) {
+      const ve = (await listarVeredas()).find((x) => x.id === Number(v));
+      return { error: `${ve?.nombre ?? "Una vereda"} ya registró ${usadas} familias: su cupo no puede ser menor.` };
+    }
+  }
+  await db.transaction(async (tx) => {
+    await tx.update(schema.proyectos).set({ cupoFamilias: c.total, updatedAt: new Date() }).where(eq(schema.proyectos.id, id));
+    await tx.delete(schema.proyectoCupos).where(eq(schema.proyectoCupos.proyectoId, id));
+    const filas = Object.entries(c.cupos).map(([v, cupo]) => ({ proyectoId: id, veredaId: Number(v), cupo }));
+    if (filas.length) await tx.insert(schema.proyectoCupos).values(filas);
+  });
+  await auditar(yo.id, "editar", "proyecto", id, { cupoFamilias: c.total, cupos: c.cupos });
+  revalidatePath(`/municipio/proyectos/${id}`);
+  return { ok: c.total ? "Cupos guardados" : "El proyecto quedó sin límite de familias" };
 }
 
 export async function cambiarEstadoProyectoMunicipal(id: string, estado: "activo" | "terminado" | "cancelado") {
@@ -363,15 +418,19 @@ export async function agregarBeneficiarioMunicipal(_: Estado, form: FormData): P
   if (!viv.autorizaAlcaldia) return { error: "Esa familia no ha autorizado compartir sus datos con la alcaldía; la puede registrar su Junta." };
   const cantidad = String(form.get("cantidad") ?? "").trim();
   const valor = Number(String(form.get("valorEstimado") ?? "").replace(/[^\d]/g, ""));
-  await db.insert(schema.participaciones).values({
-    proyectoId,
-    viviendaId,
-    fecha,
-    detalle: String(form.get("detalle") ?? "").trim() || null,
-    cantidad: cantidad ? String(Number(cantidad.replace(",", "."))) : null,
-    valorEstimado: valor > 0 ? String(valor) : null,
-    createdBy: yo.id,
-  });
+  const r = await insertarConCupo(
+    {
+      proyectoId,
+      viviendaId,
+      fecha,
+      detalle: String(form.get("detalle") ?? "").trim() || null,
+      cantidad: cantidad ? String(Number(cantidad.replace(",", "."))) : null,
+      valorEstimado: valor > 0 ? String(valor) : null,
+      createdBy: yo.id,
+    },
+    viv.veredaId,
+  );
+  if ("error" in r) return { error: r.error };
   await auditar(yo.id, "crear", "participacion", proyectoId, { viviendaId });
   revalidatePath(`/municipio/proyectos/${proyectoId}`);
   revalidatePath(`/municipio/familias/${viviendaId}`);

@@ -7,7 +7,7 @@
  * - Subida en segundo plano (Background Sync): lo guardado sin señal sube apenas vuelve la señal,
  *   aunque la app esté cerrada.
  */
-const VERSION = "v3";
+const VERSION = "v4";
 const C_ESTATICO = `estatico-${VERSION}`;
 const C_PAGINAS = `paginas-${VERSION}`;
 const C_TESELAS = "teselas-v1";

@@ -6,6 +6,7 @@ import { db, schema } from "@/db";
 import { ESTADOS_PROYECTO, TIPOS_PROYECTO } from "@/lib/ayudas";
 import { fechaCorta, hoyBogota, pesos } from "@/lib/dinero";
 import { puede } from "@/lib/permisos";
+import { estadoCupo } from "@/lib/cupos-servidor";
 import { requerirPermiso } from "@/lib/session";
 import { EstadoProyecto, ParticipacionForm, QuitarBoton } from "./forms";
 
@@ -43,6 +44,9 @@ export default async function Proyecto({ params }: PageProps<"/ayudas/[id]">) {
       : Promise.resolve([]),
   ]);
   const casas = new Set(filas.map((f) => f.viviendaId)).size;
+  // Proyecto de la alcaldía con cupos: la vereda solo registra las familias que le asignaron
+  const cupo = pr.veredaId === null && u.vereda ? await estadoCupo(id, u.vereda.id) : { cupo: null, usadas: 0 };
+  const lleno = cupo.cupo !== null && cupo.usadas >= cupo.cupo;
   const valorTotal = filas.reduce((a, f) => a + Number(f.valor ?? 0), 0);
 
   return (
@@ -82,19 +86,29 @@ export default async function Proyecto({ params }: PageProps<"/ayudas/[id]">) {
         {pr.veredaId === null ? (
           <p className="mt-3 rounded-lg bg-postigo-50 px-3 py-2.5 text-postigo-800 ring-1 ring-postigo-100">
             Proyecto de la alcaldía: la Junta puede registrar a sus familias; aquí solo ve las de su vereda.
+            {cupo.cupo !== null && (
+              <strong className="mt-1 block">
+                Cupo de la vereda: <span className="num">{cupo.usadas}</span> de <span className="num">{cupo.cupo}</span> familias registradas
+                {lleno && " — cupo completo"}.
+              </strong>
+            )}
           </p>
         ) : (
           puede(u, "ayudas", "editar") && <EstadoProyecto id={id} estado={pr.estado as "activo"} />
         )}
       </section>
 
-      {puede(u, "ayudas", "crear") && pr.estado === "activo" && (
+      {puede(u, "ayudas", "crear") && pr.estado === "activo" && (!lleno || filas.length > 0) && (
         <section className="tarjeta" aria-labelledby="agregar">
           <h2 id="agregar" className="mb-3 text-lg font-bold">Registrar beneficiario o participante</h2>
+          {lleno && <p className="mb-3 text-stone-700">El cupo de la vereda está completo: solo puede registrar nuevas entregas a las familias ya inscritas.</p>}
           <ParticipacionForm
             proyectoId={id}
             hoy={hoyBogota()}
-            viviendas={viviendas.map((v) => ({ id: v.id, label: `${v.codigo} · ${v.jefe ?? v.referencia ?? "Sin familia"}` }))}
+            viviendas={viviendas
+              // Con el cupo completo solo se registran nuevas entregas a las familias ya inscritas
+              .filter((v) => !lleno || filas.some((f) => f.viviendaId === v.id))
+              .map((v) => ({ id: v.id, label: `${v.codigo} · ${v.jefe ?? v.referencia ?? "Sin familia"}` }))}
           />
         </section>
       )}

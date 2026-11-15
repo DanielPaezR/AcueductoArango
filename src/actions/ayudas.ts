@@ -8,6 +8,7 @@ import { db, schema } from "@/db";
 import { auditar } from "@/lib/auditoria";
 import { TIPOS_PROYECTO } from "@/lib/ayudas";
 import { leerPesos } from "@/lib/dinero";
+import { insertarConCupo } from "@/lib/cupos-servidor";
 import { requerirPermiso } from "@/lib/session";
 import type { Estado } from "./auth";
 
@@ -63,16 +64,21 @@ export async function agregarParticipacion(_: Estado, form: FormData): Promise<E
   const valor = leerPesos(form.get("valorEstimado"));
   const viv = await db.query.viviendas.findFirst({ where: and(eq(schema.viviendas.id, viviendaId), isNull(schema.viviendas.deletedAt)) });
   if (!viv) return { error: "La vivienda no existe" };
-  await db.insert(PA).values({
-    proyectoId,
-    viviendaId,
-    personaId,
-    fecha,
-    detalle: String(form.get("detalle") ?? "").trim() || null,
-    cantidad: cantidad ? String(Number(cantidad.replace(",", "."))) : null,
-    valorEstimado: Number.isFinite(valor) && valor > 0 ? String(valor) : null,
-    createdBy: u.id,
-  });
+  // En proyectos de la alcaldía con cupo, la vereda solo registra las familias que le autorizaron
+  const r = await insertarConCupo(
+    {
+      proyectoId,
+      viviendaId,
+      personaId,
+      fecha,
+      detalle: String(form.get("detalle") ?? "").trim() || null,
+      cantidad: cantidad ? String(Number(cantidad.replace(",", "."))) : null,
+      valorEstimado: Number.isFinite(valor) && valor > 0 ? String(valor) : null,
+      createdBy: u.id,
+    },
+    viv.veredaId,
+  );
+  if ("error" in r) return { error: r.error };
   await auditar(u.id, "crear", "participacion", proyectoId, { viviendaId });
   revalidatePath(`/ayudas/${proyectoId}`);
   revalidatePath(`/viviendas/${viviendaId}`);

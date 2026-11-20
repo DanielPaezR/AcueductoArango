@@ -3,15 +3,20 @@
  * - Páginas: red primero, con tiempo límite; si no hay señal o es muy débil, se sirve la última versión guardada.
  * - Páginas de campo: se precargan con todos sus archivos (JS/CSS) para que funcionen sin señal
  *   aunque nunca se hayan abierto desde la última actualización del sistema.
- * - Teselas del mapa satelital: se guardan las que se ven con señal para poder verlas sin ella.
+ * - Teselas del mapa satelital: se guardan las que se ven con señal para poder verlas sin ella,
+ *   y se renuevan en segundo plano cuando tienen más de 30 días (si la imagen cambió, se ve la nueva).
  * - Subida en segundo plano (Background Sync): lo guardado sin señal sube apenas vuelve la señal,
  *   aunque la app esté cerrada.
  */
 const VERSION = "v4";
 const C_ESTATICO = `estatico-${VERSION}`;
 const C_PAGINAS = `paginas-${VERSION}`;
-const C_TESELAS = "teselas-v1";
+// v2: las teselas guardadas antes nunca se renovaban; al cambiar el nombre se borran y se vuelven a bajar.
+const C_TESELAS = "teselas-v2";
+/** Fecha en que se guardó cada tesela (las teselas suelen ser respuestas opacas y no se les puede agregar encabezados). */
+const C_TESELAS_FECHAS = "teselas-fechas-v2";
 const MAX_TESELAS = 3000;
+const VIDA_TESELA = 30 * 24 * 60 * 60 * 1000;
 /** Con señal débil, a los 6 s se muestra la copia guardada en vez de dejar la pantalla en blanco. */
 const TIEMPO_PAGINA = 6000;
 
@@ -25,7 +30,7 @@ self.addEventListener("activate", (e) => {
     caches
       .keys()
       .then((ks) =>
-        Promise.all(ks.filter((k) => ![C_ESTATICO, C_PAGINAS, C_TESELAS].includes(k)).map((k) => caches.delete(k))),
+        Promise.all(ks.filter((k) => ![C_ESTATICO, C_PAGINAS, C_TESELAS, C_TESELAS_FECHAS].includes(k)).map((k) => caches.delete(k))),
       )
       .then(() => self.clients.claim()),
   );
@@ -59,9 +64,27 @@ const esTesela = (url) =>
   url.hostname.endsWith("arcgisonline.com") || url.hostname.endsWith("tile.openstreetmap.org");
 
 async function recortarTeselas() {
-  const c = await caches.open(C_TESELAS);
+  const [c, f] = await Promise.all([caches.open(C_TESELAS), caches.open(C_TESELAS_FECHAS)]);
   const ks = await c.keys();
-  if (ks.length > MAX_TESELAS) await Promise.all(ks.slice(0, ks.length - MAX_TESELAS).map((k) => c.delete(k)));
+  if (ks.length > MAX_TESELAS)
+    await Promise.all(ks.slice(0, ks.length - MAX_TESELAS).flatMap((k) => [c.delete(k), f.delete(k.url)]));
+}
+
+/** Baja la tesela y la guarda con su fecha. Devuelve la respuesta de la red. */
+async function bajarTesela(req) {
+  const res = await fetch(req);
+  if (res.ok || res.type === "opaque") {
+    const [c, f] = await Promise.all([caches.open(C_TESELAS), caches.open(C_TESELAS_FECHAS)]);
+    await Promise.all([c.put(req, res.clone()), f.put(req.url, new Response(String(Date.now())))]);
+    if (Math.random() < 0.02) recortarTeselas();
+  }
+  return res;
+}
+
+async function teselaVieja(req) {
+  const fecha = await (await caches.open(C_TESELAS_FECHAS)).match(req.url);
+  const t = fecha ? Number(await fecha.text()) : 0;
+  return !t || Date.now() - t > VIDA_TESELA;
 }
 
 /** fetch que se rinde a los `ms` milisegundos (la señal débil a veces nunca responde). */
@@ -80,13 +103,14 @@ self.addEventListener("fetch", (e) => {
     e.respondWith(
       caches.open(C_TESELAS).then(async (c) => {
         const hit = await c.match(req);
-        if (hit) return hit;
-        const res = await fetch(req);
-        if (res.ok || res.type === "opaque") {
-          c.put(req, res.clone());
-          if (Math.random() < 0.02) recortarTeselas();
-        }
-        return res;
+        if (!hit) return bajarTesela(req);
+        // Se muestra la guardada de inmediato (sirve sin señal) y, si es vieja, se renueva para la próxima vez.
+        e.waitUntil(
+          teselaVieja(req)
+            .then((vieja) => (vieja && self.navigator.onLine !== false ? bajarTesela(req) : null))
+            .catch(() => null),
+        );
+        return hit;
       }),
     );
     return;
